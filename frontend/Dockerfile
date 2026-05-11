@@ -1,12 +1,10 @@
 # syntax=docker/dockerfile:1
-# Multi-stage build for Next.js frontend
-# Stage 1: Builder
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install --prefer-offline
+RUN npm install
 
 COPY . .
 
@@ -14,7 +12,6 @@ ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
-# Stage 2: Runner
 FROM node:20-alpine AS runner
 
 WORKDIR /app
