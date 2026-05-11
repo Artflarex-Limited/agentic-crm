@@ -20,9 +20,7 @@ WORKDIR /app
 RUN addgroup --gid 1001 nodejs && \
     adduser --uid 1001 --ingroup nodejs --disabled-password nodejs
 
-COPY --from=builder --chown=1001:1001 /app/.next/standalone /app/
-COPY --from=builder --chown=1001:1001 /app/.next/static /app/.next/static
-COPY --from=builder --chown=1001:1001 /app/public /app/public
+COPY --from=builder --chown=1001:1001 /app/.next/standalone/. /app/
 
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -31,4 +29,4 @@ USER nodejs
 
 EXPOSE 3000
 
-CMD ["node", ".next/standalone/server.js"]
+CMD ["node", "server.js"]
