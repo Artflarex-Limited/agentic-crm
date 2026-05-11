@@ -1,0 +1,18 @@
+{
+  "task_id": "TASK-QL-002",
+  "name": "Advance qualified leads to proposal stage",
+  "agent": "Qualification Agent",
+  "description": "Identify leads with score > 70 and advance to PROPOSAL stage",
+  "expected_outcome": "Lead stage changed to 'proposal', activity logged",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/leads/",
+    "filters": {"score_gt": 70},
+    "checks": [
+      {"field": "stage", "value": "proposal"},
+      {"field": "activities", "operator": "contains_activity_type", "value": "stage_changed"}
+    ]
+  },
+  "difficulty": "medium",
+  "estimated_duration_minutes": 2
+}

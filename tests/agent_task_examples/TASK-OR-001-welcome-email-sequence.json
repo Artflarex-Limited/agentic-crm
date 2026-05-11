@@ -1,0 +1,18 @@
+{
+  "task_id": "TASK-OR-001",
+  "name": "Send welcome email sequence",
+  "agent": "Outreach Agent",
+  "description": "Enroll new leads in the 'Welcome Sequence' and trigger first step",
+  "expected_outcome": "SequenceEnrollment created, first email sent, Activity logged",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/activities/",
+    "checks": [
+      {"field": "type", "value": "email_sent"},
+      {"field": "lead_id", "operator": "exists"}
+    ]
+  },
+  "prerequisites": ["welcome_sequence_exists"],
+  "difficulty": "medium",
+  "estimated_duration_minutes": 3
+}

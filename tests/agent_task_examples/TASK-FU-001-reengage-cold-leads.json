@@ -1,0 +1,20 @@
+{
+  "task_id": "TASK-FU-001",
+  "name": "Re-engage cold leads",
+  "agent": "Follow-up Agent",
+  "description": "Find leads with last_contacted_at > 7 days ago and stage='contacted', send follow-up",
+  "expected_outcome": "New activity created, lead stage transitions",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/leads/",
+    "filters": {
+      "stage": "contacted",
+      "last_contacted_before": "7_days_ago"
+    },
+    "checks": [
+      {"field": "activities", "operator": "not_empty"}
+    ]
+  },
+  "difficulty": "medium",
+  "estimated_duration_minutes": 3
+}

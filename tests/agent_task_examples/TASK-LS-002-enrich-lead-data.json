@@ -1,0 +1,19 @@
+{
+  "task_id": "TASK-LS-002",
+  "name": "Enrich lead data via Apollo.io",
+  "agent": "Research Agent",
+  "description": "Enrich existing leads with company data (domain, industry, LinkedIn URL)",
+  "expected_outcome": "Lead records updated with enriched company information",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/leads/{lead_id}",
+    "checks": [
+      {"field": "contact.company.domain", "operator": "not_null"},
+      {"field": "contact.company.industry", "operator": "not_null"},
+      {"field": "contact.company.linkedin_url", "operator": "not_null"}
+    ]
+  },
+  "prerequisites": ["seeded_leads"],
+  "difficulty": "easy",
+  "estimated_duration_minutes": 2
+}

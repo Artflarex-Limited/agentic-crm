@@ -1,0 +1,16 @@
+{
+  "task_id": "TASK-OR-002",
+  "name": "Handle email bounce",
+  "agent": "Outreach Agent",
+  "description": "Process bounce notification for a previously sent email",
+  "expected_outcome": "Lead notes updated with bounce info, AuditLog entry created",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/leads/{lead_id}",
+    "checks": [
+      {"field": "notes", "operator": "contains", "value": "[Bounce"}
+    ]
+  },
+  "difficulty": "easy",
+  "estimated_duration_minutes": 1
+}

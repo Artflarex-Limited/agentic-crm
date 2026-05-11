@@ -1,0 +1,19 @@
+{
+  "task_id": "TASK-LS-001",
+  "name": "Source leads from LinkedIn",
+  "agent": "Lead Sourcing Agent",
+  "description": "Find 10 companies in the SaaS industry with 100-500 employees and create lead entries for key contacts",
+  "expected_outcome": "10 new lead records created with source='linkedin', contact info populated",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/leads/",
+    "checks": [
+      {"count": 10},
+      {"field": "source", "value": "linkedin"},
+      {"field": "contact.email", "operator": "not_null"},
+      {"field": "contact.company", "operator": "not_null"}
+    ]
+  },
+  "difficulty": "medium",
+  "estimated_duration_minutes": 5
+}

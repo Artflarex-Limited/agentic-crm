@@ -1,0 +1,16 @@
+{
+  "task_id": "TASK-FU-002",
+  "name": "Snooze lead for 3 days",
+  "agent": "Follow-up Agent",
+  "description": "Snooze a lead that requested follow-up in 3 days",
+  "expected_outcome": "lead.snooze_until = now + 3 days",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/leads/{lead_id}",
+    "checks": [
+      {"field": "snooze_until", "operator": "future_date", "offset_days": 3}
+    ]
+  },
+  "difficulty": "easy",
+  "estimated_duration_minutes": 1
+}

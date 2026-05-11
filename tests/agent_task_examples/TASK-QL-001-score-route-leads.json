@@ -1,0 +1,18 @@
+{
+  "task_id": "TASK-QL-001",
+  "name": "Score and route leads",
+  "agent": "Qualification Agent",
+  "description": "Score all NEW leads and route to appropriate agents based on score",
+  "expected_outcome": "Lead scores calculated (0-100), leads assigned to agents based on score thresholds",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/leads/",
+    "filters": {"stage": "new"},
+    "checks": [
+      {"field": "score", "operator": "between", "min": 0, "max": 100},
+      {"field": "assigned_agent_id", "operator": "present_when_score_gt", "threshold": 60}
+    ]
+  },
+  "difficulty": "medium",
+  "estimated_duration_minutes": 2
+}

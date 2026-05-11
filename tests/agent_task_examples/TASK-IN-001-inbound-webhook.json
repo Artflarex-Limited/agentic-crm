@@ -1,0 +1,17 @@
+{
+  "task_id": "TASK-IN-001",
+  "name": "Process inbound webhook (email)",
+  "trigger": "POST /api/webhooks/email",
+  "description": "Receive inbound email, create or update lead",
+  "expected_outcome": "New lead created or existing lead updated with new activity",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/leads/{lead_id}",
+    "checks": [
+      {"field": "source", "value": "email"},
+      {"field": "activities", "operator": "not_empty"}
+    ]
+  },
+  "difficulty": "medium",
+  "estimated_duration_minutes": 2
+}

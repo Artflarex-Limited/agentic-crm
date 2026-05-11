@@ -1,0 +1,18 @@
+{
+  "task_id": "TASK-RP-002",
+  "name": "Alert on stalled deals",
+  "agent": "Reporting Agent",
+  "description": "Find deals with expected_close_date in past and stage not in [won, lost]",
+  "expected_outcome": "Activity or alert created for each stalled deal",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/activities/",
+    "filters": {"deal_stage_not_in": ["won", "lost"]},
+    "checks": [
+      {"field": "type", "value": "call_made"},
+      {"field": "metadata.stalled_deal_id", "operator": "exists"}
+    ]
+  },
+  "difficulty": "medium",
+  "estimated_duration_minutes": 2
+}

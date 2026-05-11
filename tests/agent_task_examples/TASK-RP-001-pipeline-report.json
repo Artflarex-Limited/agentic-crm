@@ -1,0 +1,18 @@
+{
+  "task_id": "TASK-RP-001",
+  "name": "Generate daily pipeline report",
+  "agent": "Reporting Agent",
+  "description": "Generate report of pipeline status (deals by stage, total value, stalled deals)",
+  "expected_outcome": "Report with deals_by_stage, open_deals_value, stalled deal warnings",
+  "validation": {
+    "method": "api",
+    "endpoint": "/api/dashboard/stats",
+    "checks": [
+      {"field": "deals_by_stage", "operator": "not_empty"},
+      {"field": "open_deals_value", "operator": "gt", "value": 0},
+      {"field": "stalled_deals", "operator": "exists"}
+    ]
+  },
+  "difficulty": "easy",
+  "estimated_duration_minutes": 1
+}
