@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - configmap.yaml
+  - secret.yaml
+  - pvc.yaml
+  - postgres.yaml
+  - redis.yaml
+  - backend.yaml
+  - celery.yaml
+  - frontend.yaml
+  - ingress.yaml
+
+namespace: default
+
+commonLabels:
+  app: agentic-crm
+  managed-by: kustomize
+
+configMapGenerator:
+  - name: agentic-crm-config
+    behavior: merge
+    literals:
+      - LOG_LEVEL=info
+
+images:
+  - name: agentic-crm-backend
+    newTag: latest
+  - name: agentic-crm-frontend
+    newTag: latest
