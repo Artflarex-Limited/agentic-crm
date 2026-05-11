@@ -19,7 +19,6 @@ RUN addgroup --gid 1001 nodejs && \
     adduser --uid 1001 --ingroup nodejs --disabled-password nodejs
 
 COPY --from=builder --chown=1001:1001 /app/.next/standalone /app/
-COPY --from=builder --chown=1001:1001 /app/public /app/public
 
 ENV NODE_ENV=production
 ENV PORT=3000
