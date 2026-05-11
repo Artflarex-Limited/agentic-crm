@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentic-crm-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  rules:
+    - host: agentic-crm.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-svc
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-svc
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - agentic-crm.example.com
+      secretName: agentic-crm-tls-secret

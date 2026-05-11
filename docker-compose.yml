@@ -1,7 +1,6 @@
 name: agentic-crm
 
 services:
-  # PostgreSQL 16 - Primary database
   postgres:
     image: postgres:16-alpine
     container_name: agentic-crm-postgres
@@ -19,8 +18,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
-  # Redis - Message queue + cache
   redis:
     image: redis:7-alpine
     container_name: agentic-crm-redis
@@ -35,14 +41,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
 
-  # FastAPI Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: agentic-crm-backend:${TAG:-latest}
     container_name: agentic-crm-backend
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://agentic_user:${POSTGRES_PASSWORD:-agentic_secret_pass}@postgres:5432/agentic_crm
       REDIS_URL: redis://redis:6379/0
@@ -65,14 +83,32 @@ services:
     volumes:
       - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
-  # Celery Worker - Agent job processing
   celeryworker:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: agentic-crm-backend:${TAG:-latest}
     container_name: agentic-crm-celery
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://agentic_user:${POSTGRES_PASSWORD:-agentic_secret_pass}@postgres:5432/agentic_crm
       REDIS_URL: redis://redis:6379/0
@@ -93,16 +129,33 @@ services:
     volumes:
       - ./backend:/app
     command: celery -A app.celery_app worker --loglevel=info --concurrency=4
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.celery_app inspect ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     profiles:
       - worker
 
-  # Celery Beat - Scheduled tasks
   celerybeat:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: agentic-crm-backend:${TAG:-latest}
     container_name: agentic-crm-celery-beat
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://agentic_user:${POSTGRES_PASSWORD:-agentic_secret_pass}@postgres:5432/agentic_crm
       REDIS_URL: redis://redis:6379/0
@@ -118,11 +171,13 @@ services:
     profiles:
       - worker
 
-  # Next.js Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: agentic-crm-frontend:${TAG:-latest}
     container_name: agentic-crm-frontend
     restart: unless-stopped
     environment:
@@ -135,8 +190,21 @@ services:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
-  # Nginx - Reverse proxy
   nginx:
     image: nginx:alpine
     container_name: agentic-crm-nginx
@@ -148,12 +216,27 @@ services:
     depends_on:
       - frontend
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
     profiles:
       - production
 
 volumes:
   postgres_data:
+    name: agentic-crm-postgres-data
   redis_data:
+    name: agentic-crm-redis-data
 
 networks:
   default:

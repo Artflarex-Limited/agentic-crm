@@ -1,0 +1,141 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celeryworker
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: celeryworker
+  template:
+    metadata:
+      labels:
+        app: celeryworker
+    spec:
+      containers:
+        - name: celeryworker
+          image: agentic-crm-backend:latest
+          command:
+            - celery
+            - -A
+            - app.celery_app
+            - worker
+            - --loglevel=info
+            - --concurrency=4
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://agentic_user:$(POSTGRES_PASSWORD)@postgres-svc:5432/agentic_crm"
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: agentic-crm-config
+                  key: REDIS_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-crm-secret
+                  key: SECRET_KEY
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-crm-secret
+                  key: SMTP_HOST
+            - name: SMTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-crm-secret
+                  key: SMTP_PORT
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-crm-secret
+                  key: SMTP_USER
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-crm-secret
+                  key: SMTP_PASS
+            - name: APOLLO_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-crm-secret
+                  key: APOLLO_API_KEY
+            - name: TWILIO_ACCOUNT_SID
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-crm-secret
+                  key: TWILIO_ACCOUNT_SID
+            - name: TWILIO_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-crm-secret
+                  key: TWILIO_AUTH_TOKEN
+          envFrom:
+            - configMapRef:
+                name: agentic-crm-config
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2
+              memory: 2Gi
+          livenessProbe:
+            exec:
+              command:
+                - celery
+                - -A
+                - app.celery_app
+                - inspect
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celerybeat
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celerybeat
+  template:
+    metadata:
+      labels:
+        app: celerybeat
+    spec:
+      containers:
+        - name: celerybeat
+          image: agentic-crm-backend:latest
+          command:
+            - celery
+            - -A
+            - app.celery_app
+            - beat
+            - --loglevel=info
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://agentic_user:$(POSTGRES_PASSWORD)@postgres-svc:5432/agentic_crm"
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: agentic-crm-config
+                  key: REDIS_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-crm-secret
+                  key: SECRET_KEY
+          envFrom:
+            - configMapRef:
+                name: agentic-crm-config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
