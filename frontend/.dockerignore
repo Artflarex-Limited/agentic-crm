@@ -1,0 +1,8 @@
+node_modules
+.next
+.cache
+.git
+*.log
+.DS_Store
+*.bak
+playwright.config.ts.bak
