@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: celeryworker
-          image: ghcr.io/obra/agentic-crm-backend:latest
+          image: ghcr.io/mustafabugraavci/agentic-crm-backend:latest
           command:
             - celery
             - -A
@@ -109,7 +109,7 @@ spec:
     spec:
       containers:
         - name: celerybeat
-          image: ghcr.io/obra/agentic-crm-backend:latest
+          image: ghcr.io/mustafabugraavci/agentic-crm-backend:latest
           command:
             - celery
             - -A

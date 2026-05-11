@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/obra/agentic-crm-backend:latest
+          image: ghcr.io/mustafabugraavci/agentic-crm-backend:latest
           ports:
             - containerPort: 8000
           env:

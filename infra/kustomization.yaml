@@ -25,7 +25,7 @@ configMapGenerator:
       - LOG_LEVEL=info
 
 images:
-  - name: ghcr.io/obra/agentic-crm-backend
+  - name: ghcr.io/mustafabugraavci/agentic-crm-backend
     newTag: latest
-  - name: ghcr.io/obra/agentic-crm-frontend
+  - name: ghcr.io/mustafabugraavci/agentic-crm-frontend
     newTag: latest
