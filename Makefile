@@ -1,4 +1,4 @@
-.PHONY: help up down build start stop restart logs logs-backend logs-frontend logs-redis logs-postgres migrate seed backup test lint clean ps
+.PHONY: help up down build start stop restart logs logs-backend logs-frontend logs-redis logs-postgres migrate seed backup test lint lint-frontend clean ps shell console
 
 COMPOSE_FILE := docker-compose.yml
 COMPOSE := docker-compose -f $(COMPOSE_FILE)
@@ -67,6 +67,12 @@ clean: ## Remove containers, volumes, and images
 
 ps: ## Show running containers
 	$(COMPOSE) ps
+
+shell: ## Shell into backend container
+	$(COMPOSE) exec backend bash
+
+console: ## Python console in backend container
+	$(COMPOSE) exec backend python -c "import asyncio; from app.db.database import engine; print('DB ready')"
 
 worker: ## Start Celery worker (requires worker profile)
 	$(COMPOSE) --profile worker up -d celeryworker
