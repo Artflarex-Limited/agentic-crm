@@ -72,7 +72,7 @@ jobs:
       - name: Run backend tests with coverage
         run: |
           cd backend
-          pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
+          PYTHONPATH=. pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
         env:
           DATABASE_URL: postgresql+asyncpg://agentic_user:agentic_secret_pass@localhost:5432/agentic_crm
           REDIS_URL: redis://localhost:6379/0
