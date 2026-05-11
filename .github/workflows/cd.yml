@@ -16,7 +16,7 @@ on:
           - production
 
 env:
-  REGISTRY: ghcr.io/${{ github.repository_owner.lowercase }}
+  REGISTRY: ghcr.io/mustafabugraavci
   IMAGE_NAME_BACKEND: agentic-crm-backend
   IMAGE_NAME_FRONTEND: agentic-crm-frontend
 
@@ -47,7 +47,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
           tags: |
-            type=sha,prefix=
+            type=sha
 
       - name: Extract metadata for frontend
         id: meta-frontend
@@ -55,7 +55,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
           tags: |
-            type=sha,prefix=
+            type=sha
 
       - name: Build and push backend image
         uses: docker/build-push-action@v5
