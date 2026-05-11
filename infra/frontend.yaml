@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: agentic-crm-frontend:latest
+          image: ghcr.io/obra/agentic-crm-frontend:latest
           ports:
             - containerPort: 3000
           envFrom:
