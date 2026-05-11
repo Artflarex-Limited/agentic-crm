@@ -92,34 +92,34 @@ jobs:
       url: https://staging.agentic-crm.com
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # - name: Checkout
+      #   uses: actions/checkout@v4
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+      # - name: Set up kubectl
+      #   uses: azure/setup-kubectl@v4
 
-      - name: Configure kubectl
-        run: |
-          echo "${{ secrets.STAGING_KUBE_CONFIG }}" | base64 -d > kubeconfig
-          echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
+      # - name: Configure kubectl
+      #   run: |
+      #     echo "${{ secrets.STAGING_KUBE_CONFIG }}" | base64 -d > kubeconfig
+      #     echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
 
-      - name: Update image tags in kustomization
-        run: |
-          cd infra
-          yq e -i '.images[0].newTag="${{ github.sha }}"' kustomization.yaml
-          yq e -i '.images[1].newTag="${{ github.sha }}"' kustomization.yaml
+      # - name: Update image tags in kustomization
+      #   run: |
+      #     cd infra
+      #     yq e -i '.images[0].newTag="${{ github.sha }}"' kustomization.yaml
+      #     yq e -i '.images[1].newTag="${{ github.sha }}"' kustomization.yaml
 
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -k infra/
-          kubectl rollout status deployment/backend --timeout=300s
-          kubectl rollout status deployment/frontend --timeout=300s
+      # - name: Deploy to Kubernetes
+      #   run: |
+      #     kubectl apply -k infra/
+      #     kubectl rollout status deployment/backend --timeout=300s
+      #     kubectl rollout status deployment/frontend --timeout=300s
 
-      - name: Verify deployment
-        run: |
-          kubectl get pods -l app=backend
-          kubectl get pods -l app=frontend
-          kubectl get ingress
+      # - name: Verify deployment
+      #   run: |
+      #     kubectl get pods -l app=backend
+      #     kubectl get pods -l app=frontend
+      #     kubectl get ingress
 
   deploy-production:
     name: Deploy to Production (Manual Gate)
@@ -130,32 +130,32 @@ jobs:
       name: production
       url: https://agentic-crm.com
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+steps:
+      # - name: Checkout
+      #   uses: actions/checkout@v4
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+      # - name: Set up kubectl
+      #   uses: azure/setup-kubectl@v4
 
-      - name: Configure kubectl
-        run: |
-          echo "${{ secrets.PRODUCTION_KUBE_CONFIG }}" | base64 -d > kubeconfig
-          echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
+      # - name: Configure kubectl
+      #   run: |
+      #     echo "${{ secrets.PRODUCTION_KUBE_CONFIG }}" | base64 -d > kubeconfig
+      #     echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
 
-      - name: Update image tags in kustomization
-        run: |
-          cd infra
-          yq e -i '.images[0].newTag="${{ github.sha }}"' kustomization.yaml
-          yq e -i '.images[1].newTag="${{ github.sha }}"' kustomization.yaml
+      # - name: Update image tags in kustomization
+      #   run: |
+      #     cd infra
+      #     yq e -i '.images[0].newTag="${{ github.sha }}"' kustomization.yaml
+      #     yq e -i '.images[1].newTag="${{ github.sha }}"' kustomization.yaml
 
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -k infra/
-          kubectl rollout status deployment/backend --timeout=300s
-          kubectl rollout status deployment/frontend --timeout=300s
+      # - name: Deploy to Kubernetes
+      #   run: |
+      #     kubectl apply -k infra/
+      #     kubectl rollout status deployment/backend --timeout=300s
+      #     kubectl rollout status deployment/frontend --timeout=300s
 
-      - name: Verify deployment
-        run: |
-          kubectl get pods -l app=backend
-          kubectl get pods -l app=frontend
-          kubectl get ingress
+      # - name: Verify deployment
+      #   run: |
+      #     kubectl get pods -l app=backend
+      #     kubectl get pods -l app=frontend
+      #     kubectl get ingress
