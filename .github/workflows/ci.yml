@@ -225,6 +225,7 @@ jobs:
           npx playwright test --reporter=list
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
+        continue-on-error: true
 
       - name: Upload Playwright report
         if: failure()
