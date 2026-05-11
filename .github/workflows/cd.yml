@@ -16,27 +16,30 @@ on:
           - production
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: ${{ github.repository }}-backend
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}-frontend
+  REGISTRY: ghcr.io/${{ github.repository_owner.lowercase }}
+  IMAGE_NAME_BACKEND: agentic-crm-backend
+  IMAGE_NAME_FRONTEND: agentic-crm-frontend
 
 jobs:
-  deploy:
-    name: Deploy to ${{ github.event.inputs.environment || 'staging' }}
+  build-and-push:
+    name: Build and Push Docker Images
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
-
+    outputs:
+      backend_tag: ${{ steps.meta-backend.outputs.tags }}
+      frontend_tag: ${{ steps.meta-frontend.outputs.tags }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Configure kubectl
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
-          echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata for backend
         id: meta-backend
@@ -54,15 +57,96 @@ jobs:
           tags: |
             type=sha,prefix=
 
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          build-args: NEXT_PUBLIC_API_URL=https://api.${{ github.event.inputs.environment == 'production' && 'agentic-crm.com' || 'staging.agentic-crm.com' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.agentic-crm.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.STAGING_KUBE_CONFIG }}" | base64 -d > kubeconfig
+          echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
+
       - name: Update image tags in kustomization
         run: |
-          cd kubernetes
+          cd infra
           yq e -i '.images[0].newTag="${{ github.sha }}"' kustomization.yaml
           yq e -i '.images[1].newTag="${{ github.sha }}"' kustomization.yaml
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl apply -k kubernetes/
+          kubectl apply -k infra/
+          kubectl rollout status deployment/backend --timeout=300s
+          kubectl rollout status deployment/frontend --timeout=300s
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -l app=backend
+          kubectl get pods -l app=frontend
+          kubectl get ingress
+
+  deploy-production:
+    name: Deploy to Production (Manual Gate)
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://agentic-crm.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.PRODUCTION_KUBE_CONFIG }}" | base64 -d > kubeconfig
+          echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
+
+      - name: Update image tags in kustomization
+        run: |
+          cd infra
+          yq e -i '.images[0].newTag="${{ github.sha }}"' kustomization.yaml
+          yq e -i '.images[1].newTag="${{ github.sha }}"' kustomization.yaml
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -k infra/
           kubectl rollout status deployment/backend --timeout=300s
           kubectl rollout status deployment/frontend --timeout=300s
 
