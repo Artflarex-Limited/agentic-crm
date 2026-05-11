@@ -1,12 +1,24 @@
-# Agentic CRM Infrastructure
+# Agentic CRM
 
-Production-ready Docker, Kubernetes, and CI/CD infrastructure for Agentic CRM.
+> Open-source CRM built for AI agents. Humans supervise; agents do the work.
+
+## Overview
+
+Agentic CRM is a cloud-native, open-source Customer Relationship Management system where **AI agents are first-class actors**. Unlike traditional CRMs where humans do all the work and AI assists, Agentic CRM inverts this: agents find leads, qualify them, follow up, and manage the pipeline autonomously — with humans overseeing, approving, and stepping in only when needed.
+
+## Features
+
+- **Lead Management** — Create, enrich, score, and route leads automatically
+- **Pipeline Management** — Visual Kanban-style pipeline with deal tracking
+- **AI Agents** — Lead Sourcing, Research, Outreach, Follow-up, Qualification, and Reporting agents
+- **Human Dashboard** — Pipeline view, activity feed, approval queue, and audit trail
+- **Integrations** — Email (SMTP/Gmail/Outlook), LinkedIn, Phone (Twilio), Webhooks, REST API
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Docker Compose                         │
+│                      Docker Compose                          │
 ├──────────────┬───────────────┬──────────────────────────────┤
 │  Next.js     │   FastAPI     │   Celery Workers             │
 │  Frontend    │   Backend     │   (Agent Jobs)                │
@@ -18,6 +30,12 @@ Production-ready Docker, Kubernetes, and CI/CD infrastructure for Agentic CRM.
 │              │   Deals)      │                              │
 └──────────────┴───────────────┴──────────────────────────────┘
 ```
+
+## Tech Stack
+
+- **Backend:** Python 3.12+, FastAPI, PostgreSQL 16, SQLAlchemy, Celery + Redis
+- **Frontend:** Next.js 14, TailwindCSS, Shadcn/UI, React Query, Zustand
+- **Infrastructure:** Docker, Kubernetes, Nginx
 
 ## Quick Start
 
@@ -47,54 +65,32 @@ make down
 | `make migrate` | Run Alembic migrations |
 | `make seed` | Seed database with sample data |
 | `make backup` | Create PostgreSQL backup |
-| `make logs-backend` | View backend logs |
-| `make logs-frontend` | View frontend logs |
-| `make worker` | Start Celery worker |
-| `make deploy` | Deploy to production |
 
-## Docker Services
+## Project Structure
 
-| Service | Port | Description |
-|---------|------|-------------|
-| frontend | 3000 | Next.js 14 dashboard |
-| backend | 8000 | FastAPI REST API |
-| postgres | 5432 | PostgreSQL 16 database |
-| redis | 6379 | Redis 7 message queue |
-| celeryworker | - | Celery background workers |
-| celerybeat | - | Celery scheduled tasks |
-| nginx | 80 | Reverse proxy (production) |
-
-## Kubernetes
-
-Manifests are in `kubernetes/`:
-- `postgres.yaml` - StatefulSet + Service for PostgreSQL
-- `redis.yaml` - StatefulSet + Service for Redis
-- `backend.yaml` - Deployment + Service for FastAPI
-- `celery.yaml` - Deployments for Celery worker and beat
-- `frontend.yaml` - Deployment + Service for Next.js
-- `ingress.yaml` - NGINX Ingress with TLS
-- `configmap.yaml` - Non-secret configuration
-- `secret.yaml` - Template for secrets
-- `pvc.yaml` - PersistentVolumeClaims
-- `kustomization.yaml` - Kustomize overlay
-
-## CI/CD
-
-GitHub Actions workflows:
-- `.github/workflows/ci.yml` - Lint, test, build, security scan
-- `.github/workflows/cd.yml` - Deploy to Kubernetes on main
-
-## Scripts
-
-- `scripts/deploy.sh` - Production deployment with health checks
-- `scripts/migrate.sh` - Run database migrations
-- `scripts/seed.sh` - Seed database with sample data
-- `scripts/backup.sh` - PostgreSQL backup to local
-
-## Environment Variables
-
-See `.env.example` for all required environment variables.
+```
+agentic-crm/
+├── backend/            # FastAPI REST API
+│   ├── app/
+│   │   ├── agents/    # AI agent implementations
+│   │   ├── models/    # SQLAlchemy models
+│   │   ├── services/  # Business logic services
+│   │   └── api/       # API routes
+│   └── tests/         # Backend tests
+├── frontend/           # Next.js 14 dashboard
+│   ├── app/           # App Router pages
+│   ├── components/    # React components
+│   └── lib/           # Utilities and API client
+├── kubernetes/         # K8s manifests
+├── docker-compose.yml # Docker Compose configuration
+├── Makefile          # Development commands
+└── SPEC.md           # Full product specification
+```
 
 ## License
 
-MIT
+MIT License — see [LICENSE](LICENSE) for details.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.

@@ -15,6 +15,8 @@ celery_app = Celery(
         "app.agents.email_outreach",
         "app.agents.research",
         "app.agents.follow_up",
+        "app.agents.qualification",
+        "app.agents.reporting",
     ]
 )
 
