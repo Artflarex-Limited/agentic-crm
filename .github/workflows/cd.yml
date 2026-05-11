@@ -15,6 +15,10 @@ on:
           - staging
           - production
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY: ghcr.io/mustafabugraavci
   IMAGE_NAME_BACKEND: agentic-crm-backend
