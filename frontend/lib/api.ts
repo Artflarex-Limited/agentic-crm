@@ -127,7 +127,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 export const api = {
   dashboard: {
     stats: () => fetchApi<{ total_leads: number; total_contacts: number; total_deals: number; open_deals_value: number; leads_by_stage: Record<string, number>; deals_by_stage: Record<string, number>; recent_activities: Activity[] }>('/api/dashboard/stats'),
-    pipeline: () => fetchApi<{ items: PipelineItem[] }>('/api/dashboard/pipeline'),
+    pipeline: () => fetchApi<Record<string, Deal[]>>('/api/dashboard/pipeline'),
   },
   leads: {
     list: (params?: { stage?: LeadStage; source?: LeadSource; search?: string }) => {
