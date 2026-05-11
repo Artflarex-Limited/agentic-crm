@@ -83,7 +83,6 @@ def upgrade() -> None:
         sa.Column("last_contacted_at", sa.DateTime(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=True),
         sa.Column("updated_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["agent_id"], ["agents.id"]),
         sa.ForeignKeyConstraint(["assigned_agent_id"], ["agents.id"]),
         sa.ForeignKeyConstraint(["contact_id"], ["contacts.id"]),
         sa.PrimaryKeyConstraint("id"),

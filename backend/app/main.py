@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api import contacts, companies, leads, deals, activities, agents, sequences, dashboard
+from app.api import contacts, companies, leads, deals, activities, agents, sequences, dashboard, webhooks
 from app.db.database import init_db
 from app.core.config import settings
 
@@ -44,6 +44,7 @@ app.include_router(activities.router, prefix="/api/activities", tags=["activitie
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(sequences.router, prefix="/api/sequences", tags=["sequences"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
+app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
 
 
 @app.get("/health")

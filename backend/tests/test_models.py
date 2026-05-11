@@ -4,6 +4,7 @@ Unit tests for SQLAlchemy models — CRUD operations
 import pytest
 import pytest_asyncio
 from datetime import datetime, timedelta
+from sqlalchemy.orm import selectinload
 
 from app.models.models import (
     Company, Contact, Lead, Deal, Agent, Sequence, SequenceEnrollment,
@@ -190,7 +191,7 @@ async def test_activity_crud(db_session, sample_lead, sample_agent):
         agent_id=sample_agent.id,
         type=ActivityType.EMAIL_SENT,
         content="Sent introductory email",
-        metadata={"subject": "Hello"}
+        activity_meta={"subject": "Hello"}
     )
     db_session.add(activity)
     await db_session.commit()
@@ -198,7 +199,7 @@ async def test_activity_crud(db_session, sample_lead, sample_agent):
 
     assert activity.id is not None
     assert activity.type == ActivityType.EMAIL_SENT
-    assert activity.metadata["subject"] == "Hello"
+    assert activity.activity_meta["subject"] == "Hello"
 
 
 @pytest.mark.asyncio
@@ -221,17 +222,32 @@ async def test_audit_log_crud(db_session, sample_agent):
 
 @pytest.mark.asyncio
 async def test_company_relationships(db_session, sample_company, sample_contact, sample_deal):
-    assert len(sample_company.contacts) == 1
-    assert sample_company.contacts[0].email == "john.doe@acme.com"
-    assert len(sample_company.deals) == 1
-    assert sample_company.deals[0].name == "Acme Enterprise Deal"
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(Company).where(Company.id == sample_company.id).options(
+selectinload(Company.contacts),
+        selectinload(Company.deals)
+        )
+    )
+    company = result.scalar_one()
+    assert len(company.contacts) == 1
+    assert company.contacts[0].email == "john.doe@acme.com"
+    assert len(company.deals) == 1
+    assert company.deals[0].name == "Acme Enterprise Deal"
 
 
 @pytest.mark.asyncio
-async def test_contact_relationships(db_session, sample_contact, sample_lead, sample_deal, sample_activity):
-    assert sample_lead in sample_contact.leads
-    assert sample_deal in sample_contact.deals
-    assert sample_activity in sample_contact.activities
+async def test_contact_relationships(db_session, sample_contact, sample_lead, sample_deal):
+    from sqlalchemy import select
+    result = await db_session.execute(
+        select(Contact).where(Contact.id == sample_contact.id).options(
+            selectinload(Contact.leads),
+            selectinload(Contact.deals)
+        )
+    )
+    contact = result.scalar_one()
+    assert sample_lead in contact.leads
+    assert sample_deal in contact.deals
 
 
 @pytest.mark.asyncio

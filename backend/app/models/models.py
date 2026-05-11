@@ -80,7 +80,7 @@ class Company(Base):
     name = Column(String(255), nullable=False)
     domain = Column(String(255), index=True, nullable=True)
     industry = Column(String(100), nullable=True)
-    size = Column(String(50), nullable=True)  # e.g., "50-200", "200-500"
+    size = Column(String(50), nullable=True)
     linkedin_url = Column(String(500), nullable=True)
     extra_data = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -118,7 +118,7 @@ class Lead(Base):
     contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=False)
     source = Column(SQLEnum(LeadSource), default=LeadSource.OTHER)
     stage = Column(SQLEnum(LeadStage), default=LeadStage.NEW)
-    score = Column(Integer, default=0)  # 0-100
+    score = Column(Integer, default=0)
     tags = Column(JSON, default=[])
     notes = Column(Text, nullable=True)
     assigned_agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
@@ -160,7 +160,7 @@ class Agent(Base):
     name = Column(String(100), nullable=False)
     role = Column(SQLEnum(AgentRole), nullable=False)
     status = Column(SQLEnum(AgentStatus), default=AgentStatus.PAUSED)
-    config = Column(JSON, default={})  # agent-specific settings
+    config = Column(JSON, default={})
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -176,7 +176,7 @@ class Sequence(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    steps = Column(JSON, default=[])  # [{type, content, delay_days}]
+    steps = Column(JSON, default=[])
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -191,7 +191,7 @@ class SequenceEnrollment(Base):
     lead_id = Column(Integer, ForeignKey("leads.id"), nullable=False)
     sequence_id = Column(Integer, ForeignKey("sequences.id"), nullable=False)
     current_step = Column(Integer, default=0)
-    status = Column(String(50), default="active")  # active, completed, paused
+    status = Column(String(50), default="active")
     enrolled_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     last_sent_at = Column(DateTime, nullable=True)
@@ -209,8 +209,8 @@ class Activity(Base):
     deal_id = Column(Integer, ForeignKey("deals.id"), nullable=True)
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
     type = Column(SQLEnum(ActivityType), nullable=False)
-    content = Column(Text, nullable=True)  # email body, call summary, etc.
-    metadata = Column(JSON, default={})
+    content = Column(Text, nullable=True)
+    activity_meta = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow)
 
     lead = relationship("Lead", back_populates="activities")

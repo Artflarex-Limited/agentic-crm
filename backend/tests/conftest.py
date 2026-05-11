@@ -171,7 +171,7 @@ async def sample_activity(db_session: AsyncSession, sample_lead: Lead, sample_ag
         agent_id=sample_agent.id,
         type=ActivityType.EMAIL_SENT,
         content="Sent welcome email to lead",
-        metadata={"email_id": "msg-123"},
+        activity_meta={"email_id": "msg-123"},
     )
     db_session.add(activity)
     await db_session.commit()
