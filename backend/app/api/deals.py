@@ -2,12 +2,13 @@
 Deals API routes
 """
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.db.database import get_db
 from app.models.models import Deal
-from app.schemas.schemas import DealCreate, DealUpdate, DealResponse
+from app.schemas.schemas import DealCreate, DealResponse, DealUpdate
 
 router = APIRouter()
 

@@ -2,10 +2,11 @@
 Phone Service
 Twilio call logging.
 """
-from app.core.config import get_settings
-import httpx
 import logging
-from datetime import datetime
+
+import httpx
+
+from app.core.config import get_settings
 
 settings = get_settings()
 logger = logging.getLogger(__name__)

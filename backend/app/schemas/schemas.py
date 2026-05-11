@@ -1,19 +1,20 @@
 """
 Pydantic schemas for request/response validation
 """
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional
-from app.models.models import LeadSource, LeadStage, DealStage, AgentRole, AgentStatus, ActivityType
+
+from pydantic import BaseModel
+
+from app.models.models import ActivityType, AgentRole, AgentStatus, DealStage, LeadSource, LeadStage
 
 
 # ─── Company ──────────────────────────────────────────────────────────────────
 class CompanyCreate(BaseModel):
     name: str
-    domain: Optional[str] = None
-    industry: Optional[str] = None
-    size: Optional[str] = None
-    linkedin_url: Optional[str] = None
+    domain: str | None = None
+    industry: str | None = None
+    size: str | None = None
+    linkedin_url: str | None = None
     extra_data: dict = {}
 
 
@@ -28,13 +29,13 @@ class CompanyResponse(CompanyCreate):
 
 # ─── Contact ──────────────────────────────────────────────────────────────────
 class ContactCreate(BaseModel):
-    company_id: Optional[int] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    title: Optional[str] = None
-    linkedin_url: Optional[str] = None
+    company_id: int | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    title: str | None = None
+    linkedin_url: str | None = None
     extra_data: dict = {}
 
 
@@ -54,25 +55,25 @@ class LeadCreate(BaseModel):
     stage: LeadStage = LeadStage.NEW
     score: int = 0
     tags: list = []
-    notes: Optional[str] = None
-    assigned_agent_id: Optional[int] = None
+    notes: str | None = None
+    assigned_agent_id: int | None = None
 
 
 class LeadUpdate(BaseModel):
-    stage: Optional[LeadStage] = None
-    score: Optional[int] = None
-    tags: Optional[list] = None
-    notes: Optional[str] = None
-    assigned_agent_id: Optional[int] = None
-    snooze_until: Optional[datetime] = None
+    stage: LeadStage | None = None
+    score: int | None = None
+    tags: list | None = None
+    notes: str | None = None
+    assigned_agent_id: int | None = None
+    snooze_until: datetime | None = None
 
 
 class LeadResponse(LeadCreate):
     id: int
-    last_contacted_at: Optional[datetime]
+    last_contacted_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    contact: Optional[ContactResponse] = None
+    contact: ContactResponse | None = None
 
     class Config:
         from_attributes = True
@@ -81,24 +82,24 @@ class LeadResponse(LeadCreate):
 # ─── Deal ────────────────────────────────────────────────────────────────────
 class DealCreate(BaseModel):
     contact_id: int
-    company_id: Optional[int] = None
+    company_id: int | None = None
     name: str
     value: float = 0.0
     stage: DealStage = DealStage.LEAD
-    expected_close_date: Optional[datetime] = None
-    notes: Optional[str] = None
+    expected_close_date: datetime | None = None
+    notes: str | None = None
 
 
 class DealUpdate(BaseModel):
-    stage: Optional[DealStage] = None
-    value: Optional[float] = None
-    expected_close_date: Optional[datetime] = None
-    notes: Optional[str] = None
+    stage: DealStage | None = None
+    value: float | None = None
+    expected_close_date: datetime | None = None
+    notes: str | None = None
 
 
 class DealResponse(DealCreate):
     id: int
-    actual_close_date: Optional[datetime]
+    actual_close_date: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -112,13 +113,13 @@ class AgentCreate(BaseModel):
     role: AgentRole
     status: AgentStatus = AgentStatus.PAUSED
     config: dict = {}
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class AgentUpdate(BaseModel):
-    name: Optional[str] = None
-    status: Optional[AgentStatus] = None
-    config: Optional[dict] = None
+    name: str | None = None
+    status: AgentStatus | None = None
+    config: dict | None = None
 
 
 class AgentResponse(AgentCreate):
@@ -133,14 +134,14 @@ class AgentResponse(AgentCreate):
 # ─── Sequence ─────────────────────────────────────────────────────────────────
 class SequenceStep(BaseModel):
     type: str  # email, linkedin, phone
-    subject: Optional[str] = None
+    subject: str | None = None
     content: str
     delay_days: int = 0
 
 
 class SequenceCreate(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     steps: list[SequenceStep] = []
     is_active: bool = True
 
@@ -156,12 +157,12 @@ class SequenceResponse(SequenceCreate):
 
 # ─── Activity ─────────────────────────────────────────────────────────────────
 class ActivityCreate(BaseModel):
-    lead_id: Optional[int] = None
-    contact_id: Optional[int] = None
-    deal_id: Optional[int] = None
-    agent_id: Optional[int] = None
+    lead_id: int | None = None
+    contact_id: int | None = None
+    deal_id: int | None = None
+    agent_id: int | None = None
     type: ActivityType
-    content: Optional[str] = None
+    content: str | None = None
     metadata: dict = {}
 
 
@@ -188,7 +189,7 @@ class PipelineItem(BaseModel):
     id: int
     name: str
     contact_name: str
-    company_name: Optional[str]
+    company_name: str | None
     value: float
     stage: DealStage
-    expected_close_date: Optional[datetime]
+    expected_close_date: datetime | None

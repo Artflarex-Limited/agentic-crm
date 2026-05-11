@@ -2,22 +2,32 @@
 Pytest fixtures for Agentic CRM backend tests
 """
 import asyncio
+from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
-from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
 from app.main import app
 from app.models.models import (
-    Company, Contact, Lead, Deal, Agent, Sequence, Activity, AuditLog,
-    LeadSource, LeadStage, DealStage, AgentRole, AgentStatus, ActivityType
+    Activity,
+    ActivityType,
+    Agent,
+    AgentRole,
+    AgentStatus,
+    Company,
+    Contact,
+    Deal,
+    DealStage,
+    Lead,
+    LeadSource,
+    LeadStage,
+    Sequence,
 )
-
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

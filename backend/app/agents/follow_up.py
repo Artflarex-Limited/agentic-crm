@@ -2,12 +2,14 @@
 Follow-up Agent
 Manages snooze, auto-re-engage cold leads, schedules follow-ups.
 """
+import logging
+from datetime import datetime, timedelta
+
+from sqlalchemy import select
+
 from app.celery_app import celery_app
 from app.db.database import AsyncSessionLocal
-from app.models.models import Lead, Activity, AuditLog, ActivityType, LeadStage
-from sqlalchemy import select
-from datetime import datetime, timedelta
-import logging
+from app.models.models import Activity, ActivityType, AuditLog, Lead, LeadStage
 
 logger = logging.getLogger(__name__)
 

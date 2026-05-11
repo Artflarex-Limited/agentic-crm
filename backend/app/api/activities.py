@@ -2,8 +2,9 @@
 Activities API routes
 """
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.database import get_db
 from app.models.models import Activity
 from app.schemas.schemas import ActivityCreate, ActivityResponse

@@ -2,13 +2,14 @@
 Email Service
 SMTP sending, templates, tracking.
 """
-from app.core.config import get_settings
-from sqlalchemy.ext.asyncio import AsyncSession
-import aiosmtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import logging
 import re
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+import aiosmtplib
+
+from app.core.config import get_settings
 
 settings = get_settings()
 logger = logging.getLogger(__name__)

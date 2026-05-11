@@ -2,14 +2,23 @@
 Email Outreach Agent
 Sends email sequences, handles bounces, tracks opens/replies.
 """
-from app.celery_app import celery_app
-from app.db.database import AsyncSessionLocal
-from app.models.models import Lead, Contact, Sequence, SequenceEnrollment, Activity, AuditLog, ActivityType
-from app.services.email_service import EmailService
+import logging
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from datetime import datetime, timedelta
-import logging
+
+from app.celery_app import celery_app
+from app.db.database import AsyncSessionLocal
+from app.models.models import (
+    Activity,
+    ActivityType,
+    AuditLog,
+    Lead,
+    Sequence,
+    SequenceEnrollment,
+)
+from app.services.email_service import EmailService
 
 logger = logging.getLogger(__name__)
 email_service = EmailService()
@@ -21,7 +30,6 @@ def send_sequence(lead_id: int, sequence_id: int):
     Process next step in an email sequence for a lead.
     Sends email, logs activity, advances step.
     """
-    from app.main import app
 
     async def _send_sequence():
         async with AsyncSessionLocal() as db:

@@ -2,12 +2,15 @@
 Research Agent
 Enriches lead data from Apollo.io, company data lookups.
 """
+import logging
+
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from app.celery_app import celery_app
 from app.db.database import AsyncSessionLocal
-from app.models.models import Lead, Contact, Company, AuditLog
+from app.models.models import AuditLog, Company, Lead
 from app.services.enrichment_service import EnrichmentService
-from sqlalchemy import select
-import logging
 
 logger = logging.getLogger(__name__)
 enrichment_service = EnrichmentService()

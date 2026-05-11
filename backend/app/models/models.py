@@ -1,17 +1,17 @@
 """
 Agentic CRM - Database Models
 """
-from datetime import datetime
-from sqlalchemy import (
-    Column, Integer, String, Text, Boolean, DateTime, ForeignKey,
-    Enum as SQLEnum, JSON, Float
-)
-from sqlalchemy.orm import relationship
-from app.db.database import Base
 import enum
+from datetime import datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import relationship
+
+from app.db.database import Base
 
 
-class AgentRole(str, enum.Enum):
+class AgentRole(enum.StrEnum):
     LEAD_SOURCING = "lead_sourcing"
     RESEARCH = "research"
     OUTREACH = "outreach"
@@ -20,13 +20,13 @@ class AgentRole(str, enum.Enum):
     REPORTING = "reporting"
 
 
-class AgentStatus(str, enum.Enum):
+class AgentStatus(enum.StrEnum):
     ACTIVE = "active"
     PAUSED = "paused"
     STOPPED = "stopped"
 
 
-class LeadSource(str, enum.Enum):
+class LeadSource(enum.StrEnum):
     LINKEDIN = "linkedin"
     EMAIL = "email"
     WEB = "web"
@@ -36,7 +36,7 @@ class LeadSource(str, enum.Enum):
     OTHER = "other"
 
 
-class LeadStage(str, enum.Enum):
+class LeadStage(enum.StrEnum):
     NEW = "new"
     CONTACTED = "contacted"
     QUALIFIED = "qualified"
@@ -46,7 +46,7 @@ class LeadStage(str, enum.Enum):
     LOST = "lost"
 
 
-class DealStage(str, enum.Enum):
+class DealStage(enum.StrEnum):
     LEAD = "lead"
     QUALIFIED = "qualified"
     PROPOSAL = "proposal"
@@ -55,7 +55,7 @@ class DealStage(str, enum.Enum):
     LOST = "lost"
 
 
-class ActivityType(str, enum.Enum):
+class ActivityType(enum.StrEnum):
     EMAIL_SENT = "email_sent"
     EMAIL_OPENED = "email_opened"
     EMAIL_REPLIED = "email_replied"

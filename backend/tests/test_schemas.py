@@ -1,21 +1,24 @@
 """
 Pydantic schema validation tests
 """
-import pytest
 from datetime import datetime, timedelta
-from pydantic import ValidationError
 
+from app.models.models import ActivityType, AgentRole, AgentStatus, DealStage, LeadSource, LeadStage
 from app.schemas.schemas import (
-    CompanyCreate, CompanyResponse,
-    ContactCreate, ContactResponse,
-    LeadCreate, LeadUpdate, LeadResponse,
-    DealCreate, DealUpdate, DealResponse,
-    AgentCreate, AgentUpdate, AgentResponse,
-    SequenceCreate, SequenceStep, SequenceResponse,
-    ActivityCreate, ActivityResponse,
-    DashboardStats, PipelineItem,
+    ActivityCreate,
+    AgentCreate,
+    AgentUpdate,
+    CompanyCreate,
+    ContactCreate,
+    DashboardStats,
+    DealCreate,
+    DealUpdate,
+    LeadCreate,
+    LeadUpdate,
+    PipelineItem,
+    SequenceCreate,
+    SequenceStep,
 )
-from app.models.models import LeadSource, LeadStage, DealStage, AgentRole, AgentStatus, ActivityType
 
 
 def test_company_create_valid():

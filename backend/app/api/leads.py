@@ -2,12 +2,13 @@
 Leads API routes
 """
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.db.database import get_db
 from app.models.models import Lead
-from app.schemas.schemas import LeadCreate, LeadUpdate, LeadResponse
+from app.schemas.schemas import LeadCreate, LeadResponse, LeadUpdate
 
 router = APIRouter()
 
@@ -71,7 +72,7 @@ async def rescore_lead(lead_id: int, db: AsyncSession = Depends(get_db)):
     lead = result.scalar_one_or_none()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    
+
     # Simple rule-based scoring
     score = 0
     contact = lead.contact
@@ -82,7 +83,7 @@ async def rescore_lead(lead_id: int, db: AsyncSession = Depends(get_db)):
             score += 20
         if contact.linkedin_url:
             score += 30
-    
+
     lead.score = min(score, 100)
     await db.commit()
     await db.refresh(lead)

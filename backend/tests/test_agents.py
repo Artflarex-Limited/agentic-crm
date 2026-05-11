@@ -1,14 +1,19 @@
 """
 Tests for Celery agent tasks with mock Redis
 """
-from sqlalchemy import select
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from sqlalchemy import select
 
 from app.models.models import (
-    Lead, Contact, Sequence, SequenceEnrollment, Activity,
-    LeadSource, LeadStage, ActivityType, AgentRole, AgentStatus
+    Activity,
+    ActivityType,
+    AgentStatus,
+    LeadSource,
+    LeadStage,
+    SequenceEnrollment,
 )
 
 

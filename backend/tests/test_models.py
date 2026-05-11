@@ -1,14 +1,27 @@
 """
 Unit tests for SQLAlchemy models — CRUD operations
 """
-import pytest
-import pytest_asyncio
 from datetime import datetime, timedelta
+
+import pytest
 from sqlalchemy.orm import selectinload
 
 from app.models.models import (
-    Company, Contact, Lead, Deal, Agent, Sequence, SequenceEnrollment,
-    Activity, AuditLog, LeadSource, LeadStage, DealStage, AgentRole, AgentStatus, ActivityType
+    Activity,
+    ActivityType,
+    Agent,
+    AgentRole,
+    AgentStatus,
+    AuditLog,
+    Company,
+    Contact,
+    Deal,
+    DealStage,
+    Lead,
+    LeadSource,
+    LeadStage,
+    Sequence,
+    SequenceEnrollment,
 )
 
 

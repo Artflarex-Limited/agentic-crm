@@ -2,12 +2,15 @@
 Qualification Agent
 Scores and routes leads, updates pipeline stages.
 """
+import logging
+from datetime import datetime
+
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from app.celery_app import celery_app
 from app.db.database import AsyncSessionLocal
-from app.models.models import Lead, Contact, Agent, AgentRole, AgentStatus, AuditLog, LeadStage
-from sqlalchemy import select
-from datetime import datetime
-import logging
+from app.models.models import Agent, AgentRole, AgentStatus, AuditLog, Lead, LeadStage
 
 logger = logging.getLogger(__name__)
 
@@ -79,13 +82,7 @@ def route_lead(lead_id: int):
             if not lead:
                 return {"status": "error", "message": "Lead not found"}
 
-            contact = lead.contact
-            target_role = None
-
-            if lead.score >= 50:
-                target_role = AgentRole.OUTREACH
-            else:
-                target_role = AgentRole.RESEARCH
+            target_role = AgentRole.OUTREACH if lead.score >= 50 else AgentRole.RESEARCH
 
             agent_result = await db.execute(
                 select(Agent)

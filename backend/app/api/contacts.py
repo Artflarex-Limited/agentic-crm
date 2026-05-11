@@ -2,10 +2,11 @@
 Contacts API routes
 """
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.database import get_db
-from app.models.models import Contact, Company
+from app.models.models import Contact
 from app.schemas.schemas import ContactCreate, ContactResponse
 
 router = APIRouter()

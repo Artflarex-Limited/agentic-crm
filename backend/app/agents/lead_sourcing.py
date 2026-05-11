@@ -2,11 +2,12 @@
 Lead Sourcing Agent
 Finds and creates leads from LinkedIn, web forms, and cold outreach targets.
 """
+
+from sqlalchemy import select
+
 from app.celery_app import celery_app
 from app.db.database import AsyncSessionLocal
-from app.models.models import Lead, Contact, Company, LeadSource, Agent, AuditLog
-from sqlalchemy import select
-from datetime import datetime
+from app.models.models import AuditLog, Company, Contact, Lead, LeadSource
 
 
 @celery_app.task(name="agents.lead_sourcing.find_from_linkedin")
@@ -33,7 +34,7 @@ async def upsert_lead(contact_data: dict):
                 select(Contact).where(Contact.email == email)
             )
             contact = existing.scalar_one_or_none()
-        
+
         if not contact:
             # Create company if needed
             company_data = contact_data.pop("company", {})
@@ -42,13 +43,13 @@ async def upsert_lead(contact_data: dict):
                 company = Company(**company_data)
                 db.add(company)
                 await db.flush()
-            
+
             # Create contact
             contact_data["company_id"] = company.id if company else None
             contact = Contact(**contact_data)
             db.add(contact)
             await db.flush()
-        
+
         # Create lead
         lead = Lead(
             contact_id=contact.id,
@@ -56,7 +57,7 @@ async def upsert_lead(contact_data: dict):
             score=contact_data.get("initial_score", 30),
         )
         db.add(lead)
-        
+
         # Audit log
         audit = AuditLog(
             action="lead_created",
@@ -65,6 +66,6 @@ async def upsert_lead(contact_data: dict):
             details={"source": "lead_sourcing_agent", "contact_email": email},
         )
         db.add(audit)
-        
+
         await db.commit()
         return {"lead_id": lead.id, "contact_id": contact.id}

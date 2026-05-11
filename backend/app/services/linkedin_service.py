@@ -2,9 +2,11 @@
 LinkedIn Service
 Connection requests, messaging via Apollo.io LinkedIn integration.
 """
-from app.core.config import get_settings
-import httpx
 import logging
+
+import httpx
+
+from app.core.config import get_settings
 
 settings = get_settings()
 logger = logging.getLogger(__name__)

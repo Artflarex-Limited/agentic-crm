@@ -2,9 +2,11 @@
 Enrichment Service
 Apollo.io integration, data enrichment.
 """
-from app.core.config import get_settings
-import httpx
 import logging
+
+import httpx
+
+from app.core.config import get_settings
 
 settings = get_settings()
 logger = logging.getLogger(__name__)

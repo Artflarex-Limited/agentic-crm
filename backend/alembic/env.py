@@ -3,12 +3,14 @@ Alembic migration environment configuration.
 """
 import asyncio
 from logging.config import fileConfig
+
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
 from alembic import context
+from app.core.config import get_settings
 from app.db.database import Base
 from app.models.models import *  # noqa: F401, F403
-from app.core.config import get_settings
 
 config = context.config
 settings = get_settings()

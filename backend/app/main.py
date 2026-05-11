@@ -1,13 +1,23 @@
 """
 Agentic CRM - FastAPI Application Entry Point
 """
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api import contacts, companies, leads, deals, activities, agents, sequences, dashboard, webhooks
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api import (
+    activities,
+    agents,
+    companies,
+    contacts,
+    dashboard,
+    deals,
+    leads,
+    sequences,
+    webhooks,
+)
 from app.db.database import init_db
-from app.core.config import settings
 
 
 @asynccontextmanager

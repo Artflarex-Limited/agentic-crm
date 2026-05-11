@@ -1,13 +1,15 @@
 """
 Webhook endpoints for inbound lead ingestion.
 """
-from fastapi import APIRouter, HTTPException, Header, Request
-from app.db.database import AsyncSessionLocal
-from app.models.models import Contact, Lead, Company, LeadSource, AuditLog
-from pydantic import BaseModel, EmailStr
-from typing import Optional
-from datetime import datetime
 import logging
+from datetime import datetime
+
+from fastapi import APIRouter, Header, HTTPException
+from pydantic import BaseModel, EmailStr
+from sqlalchemy import select
+
+from app.db.database import AsyncSessionLocal
+from app.models.models import Activity, AuditLog, Company, Contact, Lead, LeadSource
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
@@ -15,32 +17,32 @@ logger = logging.getLogger(__name__)
 
 class InboundEmailPayload(BaseModel):
     from_email: EmailStr
-    from_name: Optional[str] = None
+    from_name: str | None = None
     subject: str
     body: str
-    received_at: Optional[str] = None
+    received_at: str | None = None
 
 
 class WebFormPayload(BaseModel):
     name: str
     email: EmailStr
-    phone: Optional[str] = None
-    company: Optional[str] = None
-    message: Optional[str] = None
-    source_url: Optional[str] = None
+    phone: str | None = None
+    company: str | None = None
+    message: str | None = None
+    source_url: str | None = None
 
 
 class BouncePayload(BaseModel):
     message_id: str
     bounce_type: str
-    reason: Optional[str] = None
-    details: Optional[dict] = {}
+    reason: str | None = None
+    details: dict | None = {}
 
 
 @router.post("/inbound/email")
 async def inbound_email(
     payload: InboundEmailPayload,
-    x_webhook_secret: Optional[str] = Header(None, alias="X-Webhook-Secret"),
+    x_webhook_secret: str | None = Header(None, alias="X-Webhook-Secret"),
 ):
     """
     Receive inbound email leads.
@@ -159,8 +161,6 @@ async def email_open(message_id: str, recipient: str):
     Track email opens (pixel or webhook from provider).
     """
     async with AsyncSessionLocal() as db:
-        from app.models.models import Activity, ActivityType
-
         result = await db.execute(
             select(Activity).where(Activity.metadata.op("->>")("message_id") == message_id)
         )
@@ -179,8 +179,7 @@ async def email_reply(message_id: str, recipient: str, body: str):
     Track email replies.
     """
     async with AsyncSessionLocal() as db:
-        from app.models.models import Activity, ActivityType, Lead
-        from sqlalchemy import select
+        from app.models.models import ActivityType, Lead
 
         result = await db.execute(
             select(Activity).where(Activity.metadata.op("->>")("message_id") == message_id)
@@ -204,6 +203,3 @@ async def email_reply(message_id: str, recipient: str, body: str):
             await db.commit()
 
         return {"status": "tracked"}
-
-
-from sqlalchemy import select

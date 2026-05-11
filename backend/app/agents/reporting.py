@@ -2,12 +2,14 @@
 Reporting Agent
 Daily summaries, pipeline alerts, stalled deal warnings.
 """
+import logging
+from datetime import datetime, timedelta
+
+from sqlalchemy import func, select
+
 from app.celery_app import celery_app
 from app.db.database import AsyncSessionLocal
-from app.models.models import Lead, Deal, Activity, AuditLog, LeadStage, DealStage
-from sqlalchemy import select, func
-from datetime import datetime, timedelta
-import logging
+from app.models.models import Activity, AuditLog, Deal, DealStage, Lead, LeadStage
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +126,7 @@ def stalled_lead_warning(days_threshold: int = 14) -> dict:
                 select(Lead)
                 .where(Lead.stage == LeadStage.NEW)
                 .where(Lead.created_at < cutoff)
-                .where(Lead.snooze_until == None)
+                .where(Lead.snooze_until.is_(None))
             )
             stalled_leads = result.scalars().all()
 

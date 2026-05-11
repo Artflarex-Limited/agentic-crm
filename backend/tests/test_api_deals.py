@@ -2,7 +2,6 @@
 API tests for deals endpoints
 """
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 
 
