@@ -108,7 +108,7 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install mypy types-python-dataclustered
+          pip install mypy types-dataclustered
 
       - name: Run mypy
         run: |
