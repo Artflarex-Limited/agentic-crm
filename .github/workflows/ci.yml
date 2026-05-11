@@ -108,7 +108,7 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install mypy types-dataclustered
+          pip install mypy types-python-dateutil
 
       - name: Run mypy
         run: |
