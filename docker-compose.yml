@@ -1,0 +1,160 @@
+name: agentic-crm
+
+services:
+  # PostgreSQL 16 - Primary database
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentic-crm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: agentic_crm
+      POSTGRES_USER: agentic_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentic_secret_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentic_user -d agentic_crm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - Message queue + cache
+  redis:
+    image: redis:7-alpine
+    container_name: agentic-crm-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agentic-crm-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://agentic_user:${POSTGRES_PASSWORD:-agentic_secret_pass}@postgres:5432/agentic_crm
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      LINKEDIN_COOKIES: ${LINKEDIN_COOKIES:-}
+      APOLLO_API_KEY: ${APOLLO_API_KEY:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery Worker - Agent job processing
+  celeryworker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agentic-crm-celery
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://agentic_user:${POSTGRES_PASSWORD:-agentic_secret_pass}@postgres:5432/agentic_crm
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      LINKEDIN_COOKIES: ${LINKEDIN_COOKIES:-}
+      APOLLO_API_KEY: ${APOLLO_API_KEY:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
+    profiles:
+      - worker
+
+  # Celery Beat - Scheduled tasks
+  celerybeat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agentic-crm-celery-beat
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://agentic_user:${POSTGRES_PASSWORD:-agentic_secret_pass}@postgres:5432/agentic_crm
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: celery -A app.celery_app beat --loglevel=info
+    profiles:
+      - worker
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agentic-crm-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+  # Nginx - Reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: agentic-crm-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: agentic-crm-net
