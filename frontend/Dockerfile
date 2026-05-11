@@ -24,14 +24,12 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Security: create non-root user
 RUN addgroup --gid 1001 nodejs && \
     adduser --uid 1001 --ingroup nodejs --disabled-password nodejs
 
-# Copy built application
-COPY --from=builder --chown=nodejs:nodejs .next/standalone ./
-COPY --from=builder --chown=nodejs:nodejs .next/static ./.next/static
-COPY --from=builder --chown=nodejs:nodejs public ./public
+COPY --from=builder --chown=1001:1001 .next/standalone ./
+COPY --from=builder --chown=1001:1001 .next/static ./.next/static
+COPY --from=builder --chown=1001:1001 public ./public 2>/dev/null || true
 
 # Set environment for standalone mode
 ENV NODE_ENV=production
