@@ -1,0 +1,32 @@
+{
+  "name": "agentic-crm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered CRM with autonomous agents",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "docker-compose up",
+    "dev:backend": "docker-compose up backend",
+    "dev:frontend": "docker-compose up frontend",
+    "build": "docker-compose build",
+    "down": "docker-compose down",
+    "logs": "docker-compose logs -f",
+    "test": "docker-compose run backend pytest",
+    "lint": "docker-compose run backend ruff check .",
+    "migrate": "docker-compose run backend alembic upgrade head",
+    "seed": "docker-compose run backend python -m scripts.seed"
+  },
+  "devDependencies": {
+    "docker-compose": "^4.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "python": ">=3.12"
+  },
+  "keywords": ["crm", "ai", "agents", "sales", "automation"],
+  "author": "Artflarex Solutions <dev@artflarex.com>",
+  "license": "MIT"
+}
