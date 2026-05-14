@@ -115,7 +115,7 @@ export default function LeadsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
           <p className="text-muted-foreground mt-1">{leads.length} total leads</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+        <Button onClick={() => setShowCreateModal(true)} className="gap-2" data-tour="add-lead">
           <Plus className="h-4 w-4" />
           Add Lead
         </Button>
