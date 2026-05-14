@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+resources:
+  - configmap.yaml
+  - secret.yaml
+  - pvc-postgres.yaml
+  - pvc-redis.yaml
+  - deployment-postgres.yaml
+  - service-postgres.yaml
+  - deployment-redis.yaml
+  - service-redis.yaml
+  - deployment-backend.yaml
+  - service-backend.yaml
+  - deployment-frontend.yaml
+  - service-frontend.yaml
+  - deployment-celery.yaml
+  - service-celery.yaml
+  - ingress.yaml
