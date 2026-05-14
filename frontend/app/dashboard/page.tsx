@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { api, type Deal, type DealStage, type Activity, type Agent } from '@/lib/api'
+import { api, type Deal, type DealStage, type Activity, type Agent, type PipelineItem } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PipelineChart, StatCard, ConversionFunnel, VelocityMetric } from '@/components/analytics'
 import { DollarSign, Users, Target, TrendingUp, Activity as ActivityIcon, Bot, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 const STAGES: { key: DealStage; label: string; color: string; borderColor: string }[] = [
@@ -22,9 +23,31 @@ const activityIcons: Record<string, typeof ActivityIcon> = {
   stage_changed: ArrowUpRight,
 }
 
+interface DashboardStats {
+  total_leads: number
+  total_contacts: number
+  total_deals: number
+  open_deals_value: number
+  leads_by_stage: Record<string, number>
+  deals_by_stage: Record<string, number>
+  recent_activities: Activity[]
+}
+
+interface PipelineData {
+  items: PipelineItem[]
+}
+
 export default function DashboardPage() {
-  const [pipeline, setPipeline] = useState<Deal[]>([])
-  const [stats, setStats] = useState({ total_leads: 0, total_contacts: 0, total_deals: 0, open_deals_value: 0, leads_by_stage: {} as Record<string, number>, deals_by_stage: {} as Record<string, number>, recent_activities: [] as Activity[] })
+  const [pipeline, setPipeline] = useState<PipelineItem[]>([])
+  const [stats, setStats] = useState<DashboardStats>({
+    total_leads: 0,
+    total_contacts: 0,
+    total_deals: 0,
+    open_deals_value: 0,
+    leads_by_stage: {},
+    deals_by_stage: {},
+    recent_activities: [],
+  })
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -36,8 +59,7 @@ export default function DashboardPage() {
           api.dashboard.stats(),
           api.agents.list(),
         ])
-        const allDeals = Object.values(pipelineResponse as Record<string, Deal[]>).flat()
-        setPipeline(allDeals)
+        setPipeline((pipelineResponse as PipelineData).items)
         setStats(statsData)
         setAgents(agentsData)
       } catch (e) {
@@ -49,13 +71,27 @@ export default function DashboardPage() {
     load()
   }, [])
 
-  const dealsByStage = STAGES.map(stage => ({
-    ...stage,
-    deals: pipeline.filter(d => d.stage === stage.key),
-    total: pipeline.filter(d => d.stage === stage.key).reduce((sum, d) => sum + d.value, 0),
-  }))
+  const dealsByStage: Record<string, number> = {}
+  const dealsValueByStage: Record<string, number> = {}
+
+  STAGES.forEach(stage => {
+    const stageDeals = pipeline.filter(d => d.stage === stage.key)
+    dealsByStage[stage.key] = stageDeals.length
+    dealsValueByStage[stage.key] = stageDeals.reduce((sum, d) => sum + d.value, 0)
+  })
 
   const activeAgents = agents.filter(a => a.status === 'active').length
+
+  const conversionStages = [
+    { label: 'Lead', count: stats.leads_by_stage['new'] || 0, value: 0 },
+    { label: 'Qualified', count: stats.leads_by_stage['qualified'] || 0, value: 0 },
+    { label: 'Proposal', count: stats.leads_by_stage['proposal'] || 0, value: 0 },
+    { label: 'Negotiation', count: stats.leads_by_stage['negotiation'] || 0, value: 0 },
+    { label: 'Won', count: stats.deals_by_stage['won'] || 0, value: 0 },
+  ]
+
+  const avgDealValue = stats.total_deals > 0 ? Math.round(stats.open_deals_value / stats.total_deals) : 0
+  const conversionRate = stats.total_leads > 0 ? Math.round(((stats.deals_by_stage['won'] || 0) / stats.total_leads) * 100) : 0
 
   if (loading) {
     return (
@@ -65,13 +101,16 @@ export default function DashboardPage() {
             <Card key={i} className="skeleton h-32" />
           ))}
         </div>
-        <Card className="skeleton h-96" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="skeleton h-64" />
+          <Card className="skeleton h-64" />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in" data-tour="dashboard">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -79,149 +118,96 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
           </span>
           Live updates
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="group hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Leads</CardTitle>
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-              <Users className="h-5 w-5 text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.total_leads}</div>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <ArrowUpRight className="h-3 w-3 text-emerald-400" />
-              <span className="text-emerald-400">+12%</span> from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="group hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Open Deals Value</CardTitle>
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-              <DollarSign className="h-5 w-5 text-emerald-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">${stats.open_deals_value.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <ArrowUpRight className="h-3 w-3 text-emerald-400" />
-              <span className="text-emerald-400">+8%</span> from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="group hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Deals</CardTitle>
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
-              <Target className="h-5 w-5 text-purple-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.total_deals}</div>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <ArrowUpRight className="h-3 w-3 text-emerald-400" />
-              <span className="text-emerald-400">+5</span> new this week
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="group hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Agents</CardTitle>
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <Bot className="h-5 w-5 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{activeAgents}</div>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-              </span>
-              All systems operational
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Leads"
+          value={stats.total_leads}
+          icon={Users}
+          trend={{ value: 12, label: 'from last month' }}
+          colorClass="text-blue-400"
+          bgColorClass="bg-blue-500/10"
+        />
+        <StatCard
+          title="Open Deals Value"
+          value={`$${stats.open_deals_value.toLocaleString()}`}
+          icon={DollarSign}
+          trend={{ value: 8, label: 'from last month' }}
+          subValue={`${stats.total_deals} total deals`}
+          colorClass="text-emerald-400"
+          bgColorClass="bg-emerald-500/10"
+        />
+        <StatCard
+          title="Won This Month"
+          value={stats.deals_by_stage['won'] || 0}
+          icon={Target}
+          trend={{ value: 15, label: 'vs last month' }}
+          colorClass="text-purple-400"
+          bgColorClass="bg-purple-500/10"
+        />
+        <StatCard
+          title="Active Agents"
+          value={activeAgents}
+          icon={Bot}
+          subValue="All systems operational"
+          colorClass="text-primary"
+          bgColorClass="bg-primary/10"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
+          <PipelineChart dealsByStage={dealsByStage} dealsValueByStage={dealsValueByStage} />
+
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                Pipeline
+                Deal Velocity Metrics
               </CardTitle>
-              <Badge variant="secondary" className="font-mono text-xs">{pipeline.length} deals</Badge>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
-                {dealsByStage.map((stage, idx) => (
-                  <div 
-                    key={stage.key} 
-                    className={`min-w-[200px] flex-1 rounded-xl border ${stage.borderColor} bg-secondary/30 p-4 transition-all hover:bg-secondary/50 stagger-${idx + 1}`}
-                    style={{ animationDelay: `${idx * 50}ms` }}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${stage.color.split(' ')[1]}`} />
-                        <span className="font-medium text-sm">{stage.label}</span>
-                      </div>
-                      <Badge variant="secondary" className="font-mono text-xs">{stage.deals.length}</Badge>
-                    </div>
-                    <div className="space-y-2 min-h-[200px]">
-                      {stage.deals.slice(0, 4).map(deal => (
-                        <div 
-                          key={deal.id} 
-                          className="rounded-lg border border-border bg-card p-3 hover:border-primary/30 transition-all cursor-pointer group"
-                        >
-                          <div className="font-medium text-sm group-hover:text-primary transition-colors truncate">
-                            {deal.name}
-                          </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-sm font-mono text-emerald-400">${deal.value.toLocaleString()}</span>
-                            {deal.expected_close_date && (
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(deal.expected_close_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      {stage.deals.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center mb-2">
-                            <span className="text-lg">-</span>
-                          </div>
-                          <span className="text-xs">No deals</span>
-                        </div>
-                      )}
-                      {stage.deals.length > 4 && (
-                        <div className="text-xs text-muted-foreground text-center py-2">
-                          +{stage.deals.length - 4} more
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Total</span>
-                      <span className="text-sm font-mono font-medium text-foreground">${stage.total.toLocaleString()}</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="grid gap-3 md:grid-cols-2">
+                <VelocityMetric
+                  label="Avg Deal Value"
+                  value={`$${avgDealValue.toLocaleString()}`}
+                  subValue="Per won deal"
+                  trend={5}
+                  icon={DollarSign}
+                />
+                <VelocityMetric
+                  label="Conversion Rate"
+                  value={`${conversionRate}%`}
+                  subValue="Lead to Won"
+                  trend={-2}
+                  icon={Target}
+                />
+                <VelocityMetric
+                  label="Pipeline Value"
+                  value={`$${stats.open_deals_value.toLocaleString()}`}
+                  subValue="Across all open deals"
+                  icon={TrendingUp}
+                />
+                <VelocityMetric
+                  label="Active Agents"
+                  value={String(activeAgents)}
+                  subValue={`${agents.length} total configured`}
+                  icon={Bot}
+                />
               </div>
             </CardContent>
           </Card>
         </div>
 
         <div className="space-y-6">
+          <ConversionFunnel stages={conversionStages} />
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -237,11 +223,11 @@ export default function DashboardPage() {
                   <div key={agent.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        agent.status === 'active' ? 'bg-emerald-500/20' : 
+                        agent.status === 'active' ? 'bg-emerald-500/20' :
                         agent.status === 'paused' ? 'bg-amber-500/20' : 'bg-red-500/20'
                       }`}>
                         <Bot className={`h-4 w-4 ${
-                          agent.status === 'active' ? 'text-emerald-400' : 
+                          agent.status === 'active' ? 'text-emerald-400' :
                           agent.status === 'paused' ? 'text-amber-400' : 'text-red-400'
                         }`} />
                       </div>
@@ -252,7 +238,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${
-                        agent.status === 'active' ? 'bg-emerald-400 animate-pulse' : 
+                        agent.status === 'active' ? 'bg-emerald-400 animate-pulse' :
                         agent.status === 'paused' ? 'bg-amber-400' : 'bg-red-400'
                       }`} />
                       <span className="text-xs text-muted-foreground capitalize">{agent.status}</span>
@@ -260,8 +246,8 @@ export default function DashboardPage() {
                   </div>
                 ))
               )}
-              <Button variant="outline" className="w-full mt-2" size="sm">
-                View all agents
+              <Button variant="outline" className="w-full mt-2" size="sm" asChild>
+                <a href="/agents">View all agents</a>
               </Button>
             </CardContent>
           </Card>
@@ -293,8 +279,8 @@ export default function DashboardPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm leading-tight">{activity.content || `${activity.type.replace('_', ' ')} performed`}</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(activity.created_at).toLocaleString('en-US', { 
-                              month: 'short', 
+                            {new Date(activity.created_at).toLocaleString('en-US', {
+                              month: 'short',
                               day: 'numeric',
                               hour: 'numeric',
                               minute: '2-digit'
