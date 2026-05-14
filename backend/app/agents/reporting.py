@@ -7,11 +7,19 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
 
+from app.agents._async import run_async
+from app.agents.context import AgentContext, get_current_correlation_id, get_current_run_id
 from app.celery_app import celery_app
 from app.db.database import get_async_session_local
-from app.models.models import Activity, ActivityType, AgentRole, AuditLog, Deal, DealStage, Lead, LeadStage
-from app.agents._async import run_async
-from app.agents.context import AgentContext, get_current_run_id, get_current_correlation_id
+from app.models.models import (
+    Activity,
+    AgentRole,
+    AuditLog,
+    Deal,
+    DealStage,
+    Lead,
+    LeadStage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +39,7 @@ def daily_summary(self, correlation_id: str | None = None) -> dict:
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.REPORTING)
+    AgentContext(role=AgentRole.REPORTING)
 
     logger.info(
         "Starting daily summary generation",
@@ -134,7 +142,7 @@ def pipeline_alert(self, correlation_id: str | None = None) -> dict:
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.REPORTING)
+    AgentContext(role=AgentRole.REPORTING)
 
     logger.info(
         "Starting pipeline alert check",
@@ -209,7 +217,7 @@ def stalled_lead_warning(self, days_threshold: int = 14, correlation_id: str | N
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.REPORTING)
+    AgentContext(role=AgentRole.REPORTING)
 
     logger.info(
         f"Starting stalled lead warning check: days_threshold={days_threshold}",

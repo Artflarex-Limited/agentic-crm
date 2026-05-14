@@ -9,6 +9,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.agents._async import run_async
+from app.agents.context import AgentContext, get_current_correlation_id, get_current_run_id
 from app.celery_app import celery_app
 from app.db.database import get_async_session_local
 from app.models.models import (
@@ -21,8 +23,6 @@ from app.models.models import (
     SequenceEnrollment,
 )
 from app.services.email_service import EmailService
-from app.agents._async import run_async
-from app.agents.context import AgentContext, get_current_run_id, get_current_correlation_id
 
 logger = logging.getLogger(__name__)
 email_service = EmailService()
@@ -44,7 +44,7 @@ def send_sequence(self, lead_id: int, sequence_id: int, correlation_id: str | No
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.OUTREACH)
+    AgentContext(role=AgentRole.OUTREACH)
 
     logger.info(
         f"Starting email sequence: lead_id={lead_id}, sequence_id={sequence_id}",
@@ -170,7 +170,7 @@ def process_bounce(self, message_id: str, bounce_type: str, details: dict, corre
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.OUTREACH)
+    AgentContext(role=AgentRole.OUTREACH)
 
     logger.info(
         f"Processing bounce: message_id={message_id}, type={bounce_type}",
@@ -231,7 +231,7 @@ def check_engagement(self, lead_id: int, correlation_id: str | None = None):
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.OUTREACH)
+    AgentContext(role=AgentRole.OUTREACH)
 
     logger.info(
         f"Checking engagement: lead_id={lead_id}",
@@ -287,7 +287,7 @@ def enroll_in_sequence(self, lead_id: int, sequence_id: int, correlation_id: str
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.OUTREACH)
+    AgentContext(role=AgentRole.OUTREACH)
 
     logger.info(
         f"Enrolling lead in sequence: lead_id={lead_id}, sequence_id={sequence_id}",

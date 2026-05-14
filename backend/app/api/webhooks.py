@@ -8,12 +8,11 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 
+from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.core.security import validate_webhook_secret
 from app.db.database import AsyncSessionLocal
 from app.models.models import Activity, AuditLog, Company, Contact, Lead, LeadSource
-
-from app.core.config import get_settings
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
@@ -106,7 +105,7 @@ async def inbound_email(
         db.add(audit)
         await db.commit()
 
-        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
+        from app.services.ga4_service import generate_ga_client_id, get_ga4_service
         ga4_service = await get_ga4_service()
         if payload.ga_client_id or payload.from_email:
             await ga4_service.track_lead_created(
@@ -189,7 +188,7 @@ async def inbound_form(request: Request, payload: WebFormPayload):
         )
         db.add(audit)
 
-        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
+        from app.services.ga4_service import generate_ga_client_id, get_ga4_service
         ga4_service = await get_ga4_service()
         if payload.ga_client_id or payload.email:
             await ga4_service.track_form_submission(

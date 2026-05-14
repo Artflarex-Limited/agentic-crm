@@ -6,11 +6,11 @@ import logging
 
 from sqlalchemy import select
 
+from app.agents._async import run_async
+from app.agents.context import AgentContext, get_current_correlation_id, get_current_run_id
 from app.celery_app import celery_app
 from app.db.database import get_async_session_local
 from app.models.models import AgentRole, AuditLog, Company, Contact, Lead, LeadSource
-from app.agents._async import run_async
-from app.agents.context import AgentContext, get_current_run_id, get_current_correlation_id
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def find_leads_from_linkedin(self, query: str, limit: int = 10, correlation_id: 
     """
     from app.services.enrichment_service import EnrichmentService
 
-    ctx = AgentContext(role=AgentRole.LEAD_SOURCING)
+    AgentContext(role=AgentRole.LEAD_SOURCING)
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
 
@@ -112,7 +112,7 @@ def upsert_lead(self, contact_data: dict, correlation_id: str | None = None):
     """Upsert a lead from external source into DB"""
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.LEAD_SOURCING)
+    AgentContext(role=AgentRole.LEAD_SOURCING)
 
     logger.info(
         f"Starting lead upsert: email={contact_data.get('email')}",

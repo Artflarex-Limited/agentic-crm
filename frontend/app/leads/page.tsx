@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Search, Filter, Plus, X, ExternalLink, Mail, Phone, Building } from 'lucide-react'
+import { getStoredUTM, trackLeadCreated } from '@/lib/tracking'
 
 const STAGES: { value: LeadStage; label: string; color: string; bgColor: string }[] = [
   { value: 'new', label: 'New', color: 'text-blue-400', bgColor: 'bg-blue-400/10' },
@@ -88,7 +89,9 @@ export default function LeadsPage() {
     try {
       const contactData = { first_name: newLead.contact.first_name, last_name: newLead.contact.last_name, email: newLead.contact.email, phone: newLead.contact.phone }
       const contact = await api.contacts.create(contactData)
-      await api.leads.create({ contact_id: contact.id, source: newLead.source, stage: 'new', score: 50 })
+      const utm = getStoredUTM()
+      const lead = await api.leads.create({ contact_id: contact.id, source: newLead.source, stage: 'new', score: 50 })
+      trackLeadCreated({ source: newLead.source, stage: 'new', score: 50, utm })
       setShowCreateModal(false)
       setNewLead({ contact: { first_name: '', last_name: '', email: '', phone: '', company: '' }, source: 'web' })
       loadLeads()

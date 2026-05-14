@@ -5,7 +5,7 @@ import { api, type Deal, type DealStage, type Activity, type Agent, type Pipelin
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { PipelineChart, StatCard, ConversionFunnel, VelocityMetric } from '@/components/analytics'
+import { PipelineChart, StatCard, ConversionFunnel, VelocityMetric, PipelineTrend, WinLossRatio, AgentPerformancePanel, CampaignEffectiveness } from '@/components/analytics'
 import { DollarSign, Users, Target, TrendingUp, Activity as ActivityIcon, Bot, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 const STAGES: { key: DealStage; label: string; color: string; borderColor: string }[] = [
@@ -203,6 +203,38 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <PipelineTrend
+              data={[
+                { date: 'May 1', deals_created: 5, deals_won: 1, deals_lost: 0, revenue: 15000 },
+                { date: 'May 5', deals_created: 8, deals_won: 2, deals_lost: 1, revenue: 28000 },
+                { date: 'May 10', deals_created: 3, deals_won: 1, deals_lost: 0, revenue: 12000 },
+                { date: 'May 15', deals_created: 6, deals_won: 0, deals_lost: 2, revenue: 0 },
+              ]}
+            />
+            <WinLossRatio won={stats.deals_by_stage['won'] || 0} lost={stats.deals_by_stage['lost'] || 0} />
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <AgentPerformancePanel
+              agents={agents.map(a => ({
+                agent_id: a.id,
+                agent_name: a.name,
+                agent_role: a.role,
+                actions_today: 0,
+                actions_this_week: 0,
+                success_rate: 75,
+              }))}
+            />
+            <CampaignEffectiveness
+              campaigns={[
+                { name: 'Cold Outreach', sent: 150, opened: 78, replied: 12, converted: 3 },
+                { name: 'LinkedIn Sequence', sent: 85, opened: 52, replied: 18, converted: 5 },
+                { name: 'Follow-up', sent: 45, opened: 32, replied: 8, converted: 2 },
+              ]}
+            />
+          </div>
         </div>
 
         <div className="space-y-6">

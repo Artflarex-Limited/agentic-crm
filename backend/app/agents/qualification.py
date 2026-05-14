@@ -8,11 +8,11 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.agents._async import run_async
+from app.agents.context import AgentContext, get_current_correlation_id, get_current_run_id
 from app.celery_app import celery_app
 from app.db.database import get_async_session_local
 from app.models.models import Agent, AgentRole, AgentStatus, AuditLog, Lead, LeadStage
-from app.agents._async import run_async
-from app.agents.context import AgentContext, get_current_run_id, get_current_correlation_id
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def score_lead(self, lead_id: int, correlation_id: str | None = None):
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.QUALIFICATION)
+    AgentContext(role=AgentRole.QUALIFICATION)
 
     logger.info(
         f"Scoring lead: lead_id={lead_id}",
@@ -117,7 +117,7 @@ def route_lead(self, lead_id: int, correlation_id: str | None = None):
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    ctx = AgentContext(role=AgentRole.QUALIFICATION)
+    AgentContext(role=AgentRole.QUALIFICATION)
 
     logger.info(
         f"Routing lead: lead_id={lead_id}",
