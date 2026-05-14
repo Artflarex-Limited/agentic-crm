@@ -2,6 +2,7 @@ name: QA - Test Suite & Quality Gates
 
 permissions:
   contents: read
+  packages: read
   security-events: write
 
 on:
