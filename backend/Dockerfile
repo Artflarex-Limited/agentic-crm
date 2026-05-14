@@ -1,9 +1,14 @@
 # syntax=docker/dockerfile:1
 # Multi-stage build for FastAPI backend
 # Stage 1: Builder
-FROM python:3.12-slim AS builder
+FROM --platform=$BUILDPLATFORM python:3.12-slim AS builder
 
 WORKDIR /app
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
+RUN echo "Building for $TARGETPLATFORM"
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
