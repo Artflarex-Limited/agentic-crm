@@ -7,16 +7,14 @@ WORKDIR /app
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
-ARG NEXT_PUBLIC_API_URL=http://localhost:8000
-
-RUN echo "Building for $TARGETPLATFORM"
+ARG NEXT_PUBLIC_API_URL
 
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm install --ignore-scripts
 
 COPY . .
 
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Stage 2: Runner
@@ -30,8 +28,7 @@ RUN addgroup --gid 1001 nodejs && \
 COPY --from=builder --chown=1001:1001 /app/.next/standalone/. ./
 COPY --from=builder --chown=1001:1001 /app/public ./public
 
-ENV NODE_ENV=production
-ENV PORT=3000
+ENV NODE_ENV=production PORT=3000
 
 USER nodejs
 
