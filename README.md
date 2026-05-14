@@ -37,6 +37,24 @@ Agentic CRM is a cloud-native, open-source Customer Relationship Management syst
 - **Frontend:** Next.js 14, TailwindCSS, Shadcn/UI, React Query, Zustand
 - **Infrastructure:** Docker, Kubernetes, Nginx
 
+## Tracking Configuration
+
+Frontend analytics and tracking are configured via environment variables in `frontend/.env.local`:
+
+```bash
+# GA4 Configuration
+NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-XXXXXXXXXX
+
+# HubSpot Configuration
+NEXT_PUBLIC_HUBSPOT_PORTAL_ID=XXXXXXXX
+```
+
+**Events tracked:**
+- `generate_rfq` — fires on RFQ form submission (pass `isRFQForm` prop to `HubSpotForm`)
+- `search_abandon` — fires when user leaves search without RFQ or product view (use `useSearchAbandon` hook)
+- `blog_engage` — fires on blog pages via `useBlogEngageTracker` hook (triggered by: scroll >75%, time on page >2min, or social share click)
+- UTM parameters captured automatically on all landing pages and passed to HubSpot form submissions
+
 ## Quick Start
 
 ```bash
