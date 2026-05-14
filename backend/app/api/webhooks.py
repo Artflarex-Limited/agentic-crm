@@ -118,6 +118,22 @@ async def inbound_email(
                 user_email=payload.from_email,
             )
 
+        from app.services.hubspot_service import get_hubspot_service
+        hubspot = await get_hubspot_service()
+        await hubspot.sync_lead(
+            lead_id=lead.id,
+            email=payload.from_email,
+            lead_data={
+                "score": lead.score,
+                "source": "email",
+                "utm_source": payload.utm_source,
+                "utm_medium": payload.utm_medium,
+                "utm_campaign": payload.utm_campaign,
+                "utm_term": payload.utm_term,
+                "utm_content": payload.utm_content,
+            },
+        )
+
         logger.info(f"Inbound email lead created: {lead.id}")
         return {"status": "created", "lead_id": lead.id}
 
@@ -182,6 +198,22 @@ async def inbound_form(request: Request, payload: WebFormPayload):
                 lead_id=lead.id,
                 user_email=payload.email,
             )
+
+        from app.services.hubspot_service import get_hubspot_service
+        hubspot = await get_hubspot_service()
+        await hubspot.sync_lead(
+            lead_id=lead.id,
+            email=payload.email,
+            lead_data={
+                "score": lead.score,
+                "source": "web",
+                "utm_source": payload.utm_source,
+                "utm_medium": payload.utm_medium,
+                "utm_campaign": payload.utm_campaign,
+                "utm_term": payload.utm_term,
+                "utm_content": payload.utm_content,
+            },
+        )
         await db.commit()
 
         logger.info(f"Web form lead created: {lead.id}")

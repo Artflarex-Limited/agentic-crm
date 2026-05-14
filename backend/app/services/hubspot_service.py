@@ -171,6 +171,49 @@ class HubSpotService:
             logger.error(f"HubSpot deal creation error: {e}")
             return None
 
+    async def sync_lead(self, lead_id: int, email: str, lead_data: dict) -> dict | None:
+        """
+        Sync a lead to HubSpot with UTM and tracking data.
+        Handles lead scoring: +5 blog post, +15 gated content, +30 demo, +50 RFQ.
+        Sets marketing_qualified=true when score >= 30.
+        """
+        utm_source = lead_data.get("utm_source")
+        utm_medium = lead_data.get("utm_medium")
+        utm_campaign = lead_data.get("utm_campaign")
+        utm_term = lead_data.get("utm_term")
+        utm_content = lead_data.get("utm_content")
+
+        score = lead_data.get("score", 0)
+        source = lead_data.get("source", "")
+
+        hubspot_properties = {
+            "email": email,
+            "hs_lead_status": "NEW" if score < 30 else "MARKETING_QUALIFIED",
+        }
+
+        if utm_source:
+            hubspot_properties["utm_source"] = utm_source
+        if utm_medium:
+            hubspot_properties["utm_medium"] = utm_medium
+        if utm_campaign:
+            hubspot_properties["utm_campaign"] = utm_campaign
+        if utm_term:
+            hubspot_properties["utm_term"] = utm_term
+        if utm_content:
+            hubspot_properties["utm_content"] = utm_content
+
+        lead_source_mapping = {
+            "blog_post": 5,
+            "gated_content": 15,
+            "demo": 30,
+            "rfq": 50,
+        }
+        attributed_source = lead_source_mapping.get(source.lower() if source else "")
+        if attributed_source and score >= 30:
+            hubspot_properties["marketing_qualified"] = True
+
+        return await self.sync_contact(lead_id, email, hubspot_properties)
+
 
 async def get_hubspot_service() -> HubSpotService:
     return HubSpotService()

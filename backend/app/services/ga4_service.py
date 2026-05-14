@@ -170,6 +170,49 @@ class GA4Service:
             params=params,
         )
 
+    async def track_generate_rfq(
+        self,
+        client_id: str,
+        deal_id: int,
+        deal_value: float | None = None,
+        lead_id: int | None = None,
+        user_email: str | None = None,
+    ) -> bool:
+        """Track RFQ (Request for Quote) generation event."""
+        params: dict = {"deal_id": str(deal_id)}
+        if deal_value:
+            params["deal_value"] = str(deal_value)
+        if lead_id:
+            params["lead_id"] = str(lead_id)
+
+        return await self.track_event(
+            event_name="generate_rfq",
+            client_id=client_id,
+            user_id=user_email,
+            params=params,
+        )
+
+    async def track_search_abandon(
+        self,
+        client_id: str,
+        search_term: str | None = None,
+        lead_id: int | None = None,
+        user_email: str | None = None,
+    ) -> bool:
+        """Track search abandonment event."""
+        params: dict = {}
+        if search_term:
+            params["search_term"] = search_term
+        if lead_id:
+            params["lead_id"] = str(lead_id)
+
+        return await self.track_event(
+            event_name="search_abandon",
+            client_id=client_id,
+            user_id=user_email,
+            params=params,
+        )
+
 
 def generate_ga_client_id() -> str:
     """Generate a unique GA client ID for anonymous users."""
