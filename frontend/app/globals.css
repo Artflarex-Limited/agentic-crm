@@ -129,4 +129,31 @@
   .skeleton {
     @apply bg-gradient-to-r from-muted via-muted-foreground/10 to-muted bg-[length:200%_100%] animate-shimmer;
   }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  @keyframes spotlightPulse {
+    0%, 100% { box-shadow: 0 0 0 2px hsl(var(--primary) / 0.4); }
+    50% { box-shadow: 0 0 0 4px hsl(var(--primary) / 0.2); }
+  }
+
+  .animate-spotlight {
+    animation: spotlightPulse 2s ease-in-out infinite;
+  }
 }

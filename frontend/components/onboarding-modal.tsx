@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useOnboarding } from '@/lib/onboarding-context'
 import { ONBOARDING_STEPS } from '@/lib/onboarding-steps'
+import SpotlightTour from '@/components/ui/spotlight-tour'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -9,13 +11,44 @@ import { X, Rocket, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export default function OnboardingModal() {
-  const { currentStep, skipOnboarding, nextStep, completedSteps } = useOnboarding()
+  const { currentStep, skipOnboarding, nextStep, completedSteps, isTourActive, tourTarget, advanceTour } = useOnboarding()
   const router = useRouter()
+
+  useEffect(() => {
+    if (currentStep?.id === 'welcome' && currentStep.id !== completedSteps[completedSteps.length - 1]) {
+      const timer = setTimeout(() => {
+        if (currentStep.page) {
+          router.push(currentStep.page)
+        }
+        nextStep()
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [currentStep, completedSteps, nextStep, router])
 
   if (!currentStep) return null
 
   const currentIndex = ONBOARDING_STEPS.findIndex(s => s.id === currentStep.id)
   const totalSteps = ONBOARDING_STEPS.length
+
+  if (isTourActive && tourTarget) {
+    return (
+      <SpotlightTour
+        targetSelector={tourTarget}
+        title={currentStep.title}
+        description={currentStep.description}
+        onNext={() => {
+          if (currentStep.page) {
+            router.push(currentStep.page)
+          }
+          advanceTour()
+        }}
+        onSkip={skipOnboarding}
+        nextLabel={currentStep.action}
+        skipLabel="Skip Tour"
+      />
+    )
+  }
 
   const handleAction = () => {
     if (currentStep.page) {
@@ -51,6 +84,12 @@ export default function OnboardingModal() {
           <p className="text-muted-foreground leading-relaxed">
             {currentStep.description}
           </p>
+
+          {currentStep.id === 'welcome' && (
+            <p className="text-xs text-muted-foreground animate-pulse">
+              Starting automatically in 5 seconds...
+            </p>
+          )}
 
           <div className="flex gap-1.5">
             {ONBOARDING_STEPS.map((step, idx) => (
