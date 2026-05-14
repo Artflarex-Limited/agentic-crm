@@ -1,8 +1,8 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { TrendingUp, TrendingDown, Minus, DollarSign, Users, Target, Bot, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts'
+import { TrendingUp, TrendingDown, Minus, DollarSign, Users, Target, Bot, ArrowUpRight, ArrowDownRight, Activity as ActivityIcon } from 'lucide-react'
 
 const STAGE_COLORS: Record<string, string> = {
   lead: '#60a5fa',
@@ -190,5 +190,222 @@ export function VelocityMetric({ label, value, subValue, trend, icon: Icon }: Ve
         )}
       </div>
     </div>
+  )
+}
+
+interface TimeSeriesDataPoint {
+  date: string
+  deals_created: number
+  deals_won: number
+  deals_lost: number
+  revenue: number
+}
+
+interface PipelineTrendProps {
+  data: TimeSeriesDataPoint[]
+}
+
+export function PipelineTrend({ data }: PipelineTrendProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          Pipeline Trend
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[200px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ left: 20, right: 20 }}>
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip
+                formatter={(value: number, name: string) => [
+                  name === 'revenue' ? `$${value.toLocaleString()}` : value,
+                  name === 'revenue' ? 'Revenue' : name.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                ]}
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              />
+              <Bar dataKey="deals_won" name="deals_won" fill="#34d399" radius={[4, 4, 0, 0]} maxBarSize={20} />
+              <Bar dataKey="deals_created" name="deals_created" fill="#60a5fa" radius={[4, 4, 0, 0]} maxBarSize={20} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface WinLossRatioProps {
+  won: number
+  lost: number
+}
+
+export function WinLossRatio({ won, lost }: WinLossRatioProps) {
+  const total = won + lost
+  const wonPercent = total > 0 ? Math.round((won / total) * 100) : 0
+  const lostPercent = total > 0 ? Math.round((lost / total) * 100) : 0
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Target className="h-5 w-5 text-primary" />
+          Win/Loss Ratio
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-center">
+            <p className="text-3xl font-bold text-emerald-400">{won}</p>
+            <p className="text-xs text-muted-foreground">Won</p>
+          </div>
+          <div className="flex-1 mx-4">
+            <div className="h-4 bg-secondary rounded-full overflow-hidden flex">
+              <div className="bg-emerald-400 transition-all" style={{ width: `${wonPercent}%` }} />
+              <div className="bg-red-400 transition-all" style={{ width: `${lostPercent}%` }} />
+            </div>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold text-red-400">{lost}</p>
+            <p className="text-xs text-muted-foreground">Lost</p>
+          </div>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-emerald-400 font-medium">{wonPercent}% win rate</span>
+          <span className="text-red-400 font-medium">{lostPercent}% loss rate</span>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface AgentPerformance {
+  agent_id: number
+  agent_name: string
+  agent_role: string
+  actions_today: number
+  actions_this_week: number
+  success_rate: number
+}
+
+interface AgentPerformancePanelProps {
+  agents: AgentPerformance[]
+}
+
+export function AgentPerformancePanel({ agents }: AgentPerformancePanelProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Bot className="h-5 w-5 text-primary" />
+          Agent Performance
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {agents.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No agent data available</p>
+        ) : (
+          <div className="space-y-3">
+            {agents.map(agent => (
+              <div key={agent.agent_id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{agent.agent_name}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{agent.agent_role.replace('_', ' ')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <p className="text-lg font-bold font-mono">{agent.actions_today}</p>
+                    <p className="text-xs text-muted-foreground">Today</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold font-mono">{agent.actions_this_week}</p>
+                    <p className="text-xs text-muted-foreground">This Week</p>
+                  </div>
+                  <div className="text-center">
+                    <p className={`text-lg font-bold font-mono ${agent.success_rate >= 80 ? 'text-emerald-400' : agent.success_rate >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {agent.success_rate}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">Success</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+interface CampaignMetric {
+  name: string
+  sent: number
+  opened: number
+  replied: number
+  converted: number
+}
+
+interface CampaignEffectivenessProps {
+  campaigns: CampaignMetric[]
+}
+
+export function CampaignEffectiveness({ campaigns }: CampaignEffectivenessProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ActivityIcon className="h-5 w-5 text-primary" />
+          Outreach Effectiveness
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {campaigns.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No campaign data available</p>
+        ) : (
+          <div className="space-y-3">
+            {campaigns.map((campaign, idx) => {
+              const openRate = campaign.sent > 0 ? Math.round((campaign.opened / campaign.sent) * 100) : 0
+              const replyRate = campaign.sent > 0 ? Math.round((campaign.replied / campaign.sent) * 100) : 0
+              const convRate = campaign.sent > 0 ? Math.round((campaign.converted / campaign.sent) * 100) : 0
+
+              return (
+                <div key={idx} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{campaign.name}</span>
+                    <span className="text-xs text-muted-foreground font-mono">{campaign.sent} sent</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-blue-500/10 rounded p-2 text-center">
+                      <p className="text-sm font-bold text-blue-400">{openRate}%</p>
+                      <p className="text-xs text-muted-foreground">Open</p>
+                    </div>
+                    <div className="bg-emerald-500/10 rounded p-2 text-center">
+                      <p className="text-sm font-bold text-emerald-400">{replyRate}%</p>
+                      <p className="text-xs text-muted-foreground">Reply</p>
+                    </div>
+                    <div className="bg-purple-500/10 rounded p-2 text-center">
+                      <p className="text-sm font-bold text-purple-400">{convRate}%</p>
+                      <p className="text-xs text-muted-foreground">Convert</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
