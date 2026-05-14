@@ -18,4 +18,6 @@ resources:
   - service-frontend.yaml
   - deployment-celery.yaml
   - service-celery.yaml
+  - deployment-celery-beat.yaml
+  - service-celery-beat.yaml
   - ingress.yaml
