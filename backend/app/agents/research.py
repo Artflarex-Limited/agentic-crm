@@ -16,6 +16,8 @@ from app.agents.context import AgentContext, get_current_run_id, get_current_cor
 
 logger = logging.getLogger(__name__)
 
+enrichment_service = EnrichmentService()
+
 
 @celery_app.task(
     name="agents.research.enrich_lead",
