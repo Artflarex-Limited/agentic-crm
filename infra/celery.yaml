@@ -139,3 +139,29 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: celeryworker-svc
+  namespace: default
+spec:
+  selector:
+    app: celeryworker
+  ports:
+    - port: 6379
+      targetPort: 6379
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: celerybeat-svc
+  namespace: default
+spec:
+  selector:
+    app: celerybeat
+  ports:
+    - port: 5555
+      targetPort: 5555
+  type: ClusterIP

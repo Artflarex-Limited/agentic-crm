@@ -1,26 +1,34 @@
-FROM node:20-alpine AS builder
+# syntax=docker/dockerfile:1
+# Multi-stage build for Next.js frontend
+# Stage 1: Builder
+FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
 
 WORKDIR /app
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+
+RUN echo "Building for $TARGETPLATFORM"
 
 COPY package.json package-lock.json* ./
 RUN npm install
 
 COPY . .
 
-ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
-RUN mkdir -p /app/public && touch /app/public/.gitkeep
-
-FROM node:20-alpine
+# Stage 2: Runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
 RUN addgroup --gid 1001 nodejs && \
     adduser --uid 1001 --ingroup nodejs --disabled-password nodejs
 
-COPY --from=builder --chown=1001:1001 /app/.next/standalone/. /app/
+COPY --from=builder --chown=1001:1001 /app/.next/standalone/. ./
+COPY --from=builder --chown=1001:1001 /app/public ./public
 
 ENV NODE_ENV=production
 ENV PORT=3000
