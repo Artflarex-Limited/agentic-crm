@@ -66,6 +66,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta-backend.outputs.tags }}
           cache-from: type=gha
@@ -76,8 +77,46 @@ jobs:
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta-frontend.outputs.tags }}
           build-args: NEXT_PUBLIC_API_URL=https://api.${{ github.event.inputs.environment == 'production' && 'agentic-crm.com' || 'staging.agentic-crm.com' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Kubernetes (${{ github.event.inputs.environment || 'staging' }})
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+          kubectl version --client
+
+      - name: Deploy with Kustomize
+        run: |
+          export KUBECONFIG=kubeconfig
+          cd infra
+          kustomize edit set image ghcr.io/mustafabugraavci/agentic-crm-backend=${{ needs.build-and-push.outputs.backend_tag }}
+          kustomize edit set image ghcr.io/mustafabugraavci/agentic-crm-frontend=${{ needs.build-and-push.outputs.frontend_tag }}
+          kustomize build . | kubectl apply -f -
+
+      - name: Verify deployment
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl rollout status deployment/backend -n default --timeout=300s
+          kubectl rollout status deployment/frontend -n default --timeout=300s
+          kubectl get pods -n default
