@@ -9,22 +9,39 @@ from sqlalchemy import func, select
 
 from app.celery_app import celery_app
 from app.db.database import get_async_session_local
-from app.models.models import Activity, AuditLog, Deal, DealStage, Lead, LeadStage
+from app.models.models import Activity, ActivityType, AgentRole, AuditLog, Deal, DealStage, Lead, LeadStage
 from app.agents._async import run_async
+from app.agents.context import AgentContext, get_current_run_id, get_current_correlation_id
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="agents.reporting.daily_summary", bind=True, max_retries=3)
-def daily_summary(self) -> dict:
+@celery_app.task(
+    name="agents.reporting.daily_summary",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=300,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def daily_summary(self, correlation_id: str | None = None) -> dict:
     """
     Generate daily summary of CRM activity.
     Returns stats and recent activity.
     """
+    run_id = get_current_run_id()
+    corr_id = correlation_id or get_current_correlation_id()
+    ctx = AgentContext(role=AgentRole.REPORTING)
+
+    logger.info(
+        "Starting daily summary generation",
+        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+    )
+
     async def _daily_summary():
         SessionLocal = get_async_session_local()
         if SessionLocal is None:
-            logger.error("Database not configured")
+            logger.error("Database not configured", extra={"run_id": run_id})
             return {"status": "error", "message": "Database not configured"}
 
         async with SessionLocal() as db:
@@ -59,7 +76,7 @@ def daily_summary(self) -> dict:
             )
             recent_activities = activities_result.scalars().all()
 
-            return {
+            summary = {
                 "date": str(today - timedelta(days=1)),
                 "new_leads": new_leads,
                 "new_deals": new_deals,
@@ -69,24 +86,65 @@ def daily_summary(self) -> dict:
                         "id": a.id,
                         "type": a.type.value if hasattr(a.type, "value") else a.type,
                         "content": a.content,
-                        "created_at": a.created_at.isoformat(),
+                        "created_at": a.created_at.isoformat() if a.created_at else None,
                     }
                     for a in recent_activities
                 ],
+                "run_id": run_id,
+                "correlation_id": corr_id,
             }
+
+            audit = AuditLog(
+                action="daily_summary_generated",
+                entity_type="report",
+                entity_id=0,
+                details={
+                    "date": summary["date"],
+                    "new_leads": new_leads,
+                    "new_deals": new_deals,
+                    "open_deals": open_deals,
+                    "activity_count": len(recent_activities),
+                    "run_id": run_id,
+                    "correlation_id": corr_id,
+                },
+            )
+            db.add(audit)
+            await db.commit()
+
+            logger.info(
+                f"Daily summary generated: {new_leads} leads, {new_deals} deals",
+                extra={"run_id": run_id, "new_leads": new_leads, "new_deals": new_deals}
+            )
+            return summary
 
     return run_async(_daily_summary())
 
 
-@celery_app.task(name="agents.reporting.pipeline_alert", bind=True, max_retries=3)
-def pipeline_alert(self) -> dict:
+@celery_app.task(
+    name="agents.reporting.pipeline_alert",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=300,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def pipeline_alert(self, correlation_id: str | None = None) -> dict:
     """
     Check for stalled deals and send alerts.
     """
+    run_id = get_current_run_id()
+    corr_id = correlation_id or get_current_correlation_id()
+    ctx = AgentContext(role=AgentRole.REPORTING)
+
+    logger.info(
+        "Starting pipeline alert check",
+        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+    )
+
     async def _pipeline_alert():
         SessionLocal = get_async_session_local()
         if SessionLocal is None:
-            logger.error("Database not configured")
+            logger.error("Database not configured", extra={"run_id": run_id})
             return {"status": "error", "message": "Database not configured"}
 
         async with SessionLocal() as db:
@@ -99,11 +157,12 @@ def pipeline_alert(self) -> dict:
 
             alert_details = []
             for deal in stalled_deals:
+                days_stalled = (datetime.utcnow() - deal.updated_at).days
                 alert_details.append({
                     "deal_id": deal.id,
                     "deal_name": deal.name,
                     "stage": deal.stage.value if hasattr(deal.stage, "value") else deal.stage,
-                    "days_stalled": (datetime.utcnow() - deal.updated_at).days,
+                    "days_stalled": days_stalled,
                 })
 
             if alert_details:
@@ -111,29 +170,56 @@ def pipeline_alert(self) -> dict:
                     action="pipeline_alert",
                     entity_type="deal",
                     entity_id=0,
-                    details={"stalled_count": len(alert_details), "deals": alert_details},
+                    details={
+                        "stalled_count": len(alert_details),
+                        "deals": alert_details,
+                        "run_id": run_id,
+                        "correlation_id": corr_id,
+                    },
                 )
                 db.add(audit)
                 await db.commit()
 
+            logger.info(
+                f"Pipeline alert generated: {len(alert_details)} stalled deals",
+                extra={"run_id": run_id, "stalled_count": len(alert_details)}
+            )
             return {
                 "status": "alert_generated",
                 "stalled_deals": len(alert_details),
                 "deals": alert_details,
+                "run_id": run_id,
+                "correlation_id": corr_id,
             }
 
     return run_async(_pipeline_alert())
 
 
-@celery_app.task(name="agents.reporting.stalled_lead_warning", bind=True, max_retries=3)
-def stalled_lead_warning(self, days_threshold: int = 14) -> dict:
+@celery_app.task(
+    name="agents.reporting.stalled_lead_warning",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=300,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def stalled_lead_warning(self, days_threshold: int = 14, correlation_id: str | None = None) -> dict:
     """
     Find leads stuck in NEW stage for too long.
     """
+    run_id = get_current_run_id()
+    corr_id = correlation_id or get_current_correlation_id()
+    ctx = AgentContext(role=AgentRole.REPORTING)
+
+    logger.info(
+        f"Starting stalled lead warning check: days_threshold={days_threshold}",
+        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+    )
+
     async def _stalled_lead_warning():
         SessionLocal = get_async_session_local()
         if SessionLocal is None:
-            logger.error("Database not configured")
+            logger.error("Database not configured", extra={"run_id": run_id})
             return {"status": "error", "message": "Database not configured"}
 
         async with SessionLocal() as db:
@@ -154,10 +240,31 @@ def stalled_lead_warning(self, days_threshold: int = 14) -> dict:
                     "days_old": (datetime.utcnow() - lead.created_at).days,
                 })
 
+            audit = AuditLog(
+                action="stalled_lead_warning",
+                entity_type="lead",
+                entity_id=0,
+                details={
+                    "stalled_count": len(warnings),
+                    "leads": warnings,
+                    "days_threshold": days_threshold,
+                    "run_id": run_id,
+                    "correlation_id": corr_id,
+                },
+            )
+            db.add(audit)
+            await db.commit()
+
+            logger.info(
+                f"Stalled lead warning generated: {len(warnings)} stalled leads",
+                extra={"run_id": run_id, "stalled_count": len(warnings)}
+            )
             return {
                 "status": "warning_generated",
                 "stalled_leads": len(warnings),
                 "leads": warnings,
+                "run_id": run_id,
+                "correlation_id": corr_id,
             }
 
     return run_async(_stalled_lead_warning())

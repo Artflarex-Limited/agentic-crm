@@ -8,18 +8,30 @@ Each agent is a Celery task that performs a specific role:
 - research: Enriches lead/company data from Apollo.io
 - qualification: Scores and routes leads
 - reporting: Daily summaries, pipeline alerts
+
+Context & Tracing:
+All agents support correlation_id for distributed tracing and run_id
+for individual execution tracking. Pass correlation_id through task
+chains to enable end-to-end observability.
 """
-from app.agents.email_outreach import check_engagement, process_bounce, send_sequence
+from app.agents.email_outreach import (
+    check_engagement,
+    enroll_in_sequence,
+    process_bounce,
+    send_sequence,
+)
 from app.agents.follow_up import process_cold_leads, schedule_follow_up, snooze_lead
 from app.agents.lead_sourcing import find_leads_from_linkedin, upsert_lead
 from app.agents.qualification import route_lead, score_lead
 from app.agents.reporting import daily_summary, pipeline_alert, stalled_lead_warning
 from app.agents.research import enrich_company, enrich_lead
+from app.agents.context import AgentContext, AgentTaskMixin
 
 __all__ = [
     "find_leads_from_linkedin",
     "upsert_lead",
     "send_sequence",
+    "enroll_in_sequence",
     "process_bounce",
     "check_engagement",
     "snooze_lead",
@@ -32,4 +44,6 @@ __all__ = [
     "daily_summary",
     "pipeline_alert",
     "stalled_lead_warning",
+    "AgentContext",
+    "AgentTaskMixin",
 ]

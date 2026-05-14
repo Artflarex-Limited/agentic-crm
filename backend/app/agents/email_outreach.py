@@ -3,6 +3,7 @@ Email Outreach Agent
 Sends email sequences, handles bounces, tracks opens/replies.
 """
 import logging
+import sys
 from datetime import datetime
 
 from sqlalchemy import select
@@ -13,6 +14,7 @@ from app.db.database import get_async_session_local
 from app.models.models import (
     Activity,
     ActivityType,
+    AgentRole,
     AuditLog,
     Lead,
     Sequence,
@@ -20,22 +22,39 @@ from app.models.models import (
 )
 from app.services.email_service import EmailService
 from app.agents._async import run_async
+from app.agents.context import AgentContext, get_current_run_id, get_current_correlation_id
 
 logger = logging.getLogger(__name__)
 email_service = EmailService()
 
 
-@celery_app.task(name="agents.email_outreach.send_sequence", bind=True, max_retries=3)
-def send_sequence(self, lead_id: int, sequence_id: int):
+@celery_app.task(
+    name="agents.email_outreach.send_sequence",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=60,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=600,
+)
+def send_sequence(self, lead_id: int, sequence_id: int, correlation_id: str | None = None):
     """
     Process next step in an email sequence for a lead.
     Sends email, logs activity, advances step.
     """
+    run_id = get_current_run_id()
+    corr_id = correlation_id or get_current_correlation_id()
+    ctx = AgentContext(role=AgentRole.OUTREACH)
+
+    logger.info(
+        f"Starting email sequence: lead_id={lead_id}, sequence_id={sequence_id}",
+        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+    )
 
     async def _send_sequence():
         SessionLocal = get_async_session_local()
         if SessionLocal is None:
-            logger.error("Database not configured")
+            logger.error("Database not configured", extra={"run_id": run_id})
             return {"status": "error", "message": "Database not configured"}
 
         async with SessionLocal() as db:
@@ -47,7 +66,10 @@ def send_sequence(self, lead_id: int, sequence_id: int):
             )
             enrollment = enrollment.scalar_one_or_none()
             if not enrollment:
-                logger.warning(f"No enrollment found for lead {lead_id}, sequence {sequence_id}")
+                logger.warning(
+                    f"No enrollment found for lead {lead_id}, sequence {sequence_id}",
+                    extra={"run_id": run_id}
+                )
                 return {"status": "error", "message": "Enrollment not found"}
 
             if enrollment.status != "active":
@@ -65,6 +87,10 @@ def send_sequence(self, lead_id: int, sequence_id: int):
                 enrollment.status = "completed"
                 enrollment.completed_at = datetime.utcnow()
                 await db.commit()
+                logger.info(
+                    f"Sequence completed for lead {lead_id}",
+                    extra={"run_id": run_id, "lead_id": lead_id}
+                )
                 return {"status": "completed", "message": "All steps completed"}
 
             step = sequence.steps[current_step]
@@ -97,6 +123,9 @@ def send_sequence(self, lead_id: int, sequence_id: int):
                         "sequence_id": sequence_id,
                         "step": current_step,
                         "subject": step.get("subject"),
+                        "run_id": run_id,
+                        "correlation_id": corr_id,
+                        "message_id": f"seq-{sequence_id}-step-{current_step}-{lead_id}",
                     },
                 )
                 db.add(activity)
@@ -109,30 +138,49 @@ def send_sequence(self, lead_id: int, sequence_id: int):
                         "contact_email": contact.email,
                         "sequence_id": sequence_id,
                         "step": current_step,
+                        "run_id": run_id,
+                        "correlation_id": corr_id,
                     },
                 )
                 db.add(audit)
                 await db.commit()
+                logger.info(
+                    f"Email sent: lead_id={lead_id}, step={current_step}",
+                    extra={"run_id": run_id, "lead_id": lead_id, "step": current_step}
+                )
                 return {"status": "sent", "lead_id": lead_id, "step": current_step}
             else:
+                logger.warning(
+                    f"Email send failed for lead {lead_id}, scheduling retry",
+                    extra={"run_id": run_id, "lead_id": lead_id}
+                )
                 try:
-                    self.retry(countdown=60, exc=Exception("Email send failed"))
+                    raise Exception("Email send failed")
                 except Exception:
-                    return {"status": "error", "message": "Failed to send email"}
+                    self.retry(countdown=60, exc=sys.exc_info())
 
     return run_async(_send_sequence())
 
 
 @celery_app.task(name="agents.email_outreach.process_bounce", bind=True, max_retries=3)
-def process_bounce(self, message_id: str, bounce_type: str, details: dict):
+def process_bounce(self, message_id: str, bounce_type: str, details: dict, correlation_id: str | None = None):
     """
     Handle bounced email notification.
     Marks lead appropriately and logs the bounce.
     """
+    run_id = get_current_run_id()
+    corr_id = correlation_id or get_current_correlation_id()
+    ctx = AgentContext(role=AgentRole.OUTREACH)
+
+    logger.info(
+        f"Processing bounce: message_id={message_id}, type={bounce_type}",
+        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+    )
+
     async def _process_bounce():
         SessionLocal = get_async_session_local()
         if SessionLocal is None:
-            logger.error("Database not configured")
+            logger.error("Database not configured", extra={"run_id": run_id})
             return {"status": "error", "message": "Database not configured"}
 
         async with SessionLocal() as db:
@@ -143,7 +191,10 @@ def process_bounce(self, message_id: str, bounce_type: str, details: dict):
             )
             activity = result.scalar_one_or_none()
             if not activity or not activity.lead:
-                logger.warning(f"No activity found for bounce message_id={message_id}")
+                logger.warning(
+                    f"No activity found for bounce message_id={message_id}",
+                    extra={"run_id": run_id}
+                )
                 return {"status": "ignored"}
 
             lead = activity.lead
@@ -153,25 +204,44 @@ def process_bounce(self, message_id: str, bounce_type: str, details: dict):
                 action="email_bounced",
                 entity_type="lead",
                 entity_id=lead.id,
-                details={"message_id": message_id, "bounce_type": bounce_type, "details": details},
+                details={
+                    "message_id": message_id,
+                    "bounce_type": bounce_type,
+                    "details": details,
+                    "run_id": run_id,
+                    "correlation_id": corr_id,
+                },
             )
             db.add(audit)
             await db.commit()
+            logger.info(
+                f"Bounce processed: lead_id={lead.id}",
+                extra={"run_id": run_id, "lead_id": lead.id}
+            )
             return {"status": "processed", "lead_id": lead.id}
 
     return run_async(_process_bounce())
 
 
 @celery_app.task(name="agents.email_outreach.check_engagement", bind=True, max_retries=3)
-def check_engagement(self, lead_id: int):
+def check_engagement(self, lead_id: int, correlation_id: str | None = None):
     """
     Check if a lead has opened/replied to recent emails.
     Updates lead score based on engagement.
     """
+    run_id = get_current_run_id()
+    corr_id = correlation_id or get_current_correlation_id()
+    ctx = AgentContext(role=AgentRole.OUTREACH)
+
+    logger.info(
+        f"Checking engagement: lead_id={lead_id}",
+        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+    )
+
     async def _check_engagement():
         SessionLocal = get_async_session_local()
         if SessionLocal is None:
-            logger.error("Database not configured")
+            logger.error("Database not configured", extra={"run_id": run_id})
             return {"status": "error", "message": "Database not configured"}
 
         async with SessionLocal() as db:
@@ -199,8 +269,74 @@ def check_engagement(self, lead_id: int):
             if lead:
                 lead.score = min(100, lead.score + score_delta)
                 await db.commit()
+                logger.info(
+                    f"Engagement score updated: lead_id={lead_id}, delta={score_delta}",
+                    extra={"run_id": run_id, "lead_id": lead_id, "score_delta": score_delta}
+                )
                 return {"status": "updated", "lead_id": lead_id, "score_delta": score_delta}
 
             return {"status": "error", "message": "Lead not found"}
 
     return run_async(_check_engagement())
+
+
+@celery_app.task(name="agents.email_outreach.enroll_in_sequence", bind=True, max_retries=3)
+def enroll_in_sequence(self, lead_id: int, sequence_id: int, correlation_id: str | None = None):
+    """
+    Enroll a lead in an email sequence.
+    """
+    run_id = get_current_run_id()
+    corr_id = correlation_id or get_current_correlation_id()
+    ctx = AgentContext(role=AgentRole.OUTREACH)
+
+    logger.info(
+        f"Enrolling lead in sequence: lead_id={lead_id}, sequence_id={sequence_id}",
+        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+    )
+
+    async def _enroll():
+        SessionLocal = get_async_session_local()
+        if SessionLocal is None:
+            logger.error("Database not configured", extra={"run_id": run_id})
+            return {"status": "error", "message": "Database not configured"}
+
+        async with SessionLocal() as db:
+            existing = await db.execute(
+                select(SequenceEnrollment)
+                .where(SequenceEnrollment.lead_id == lead_id)
+                .where(SequenceEnrollment.sequence_id == sequence_id)
+            )
+            enrollment = existing.scalar_one_or_none()
+            if enrollment:
+                return {"status": "already_enrolled", "enrollment_id": enrollment.id}
+
+            enrollment = SequenceEnrollment(
+                lead_id=lead_id,
+                sequence_id=sequence_id,
+                current_step=0,
+                status="active",
+                enrolled_at=datetime.utcnow(),
+            )
+            db.add(enrollment)
+            await db.flush()
+
+            audit = AuditLog(
+                action="sequence_enrolled",
+                entity_type="lead",
+                entity_id=lead_id,
+                details={
+                    "sequence_id": sequence_id,
+                    "enrollment_id": enrollment.id,
+                    "run_id": run_id,
+                    "correlation_id": corr_id,
+                },
+            )
+            db.add(audit)
+            await db.commit()
+            logger.info(
+                f"Lead enrolled in sequence: lead_id={lead_id}, enrollment_id={enrollment.id}",
+                extra={"run_id": run_id}
+            )
+            return {"status": "enrolled", "enrollment_id": enrollment.id}
+
+    return run_async(_enroll())
