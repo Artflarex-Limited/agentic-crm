@@ -10,6 +10,12 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import get_settings
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
+from app.core.clients import (
+    check_all_health,
+    check_database_health,
+    check_redis_health,
+    check_elasticsearch_health,
+)
 from app.api import (
     activities,
     agents,
@@ -28,11 +34,8 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     await init_db()
     yield
-    # Shutdown
-    pass
 
 
 app = FastAPI(
@@ -42,11 +45,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
-# CORS
 allowed_origins = settings.allowed_origins.split(",") if settings.allowed_origins else ["http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,
@@ -56,7 +57,6 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-API-Key"],
 )
 
-# Routes
 app.include_router(contacts.router, prefix="/api/contacts", tags=["contacts"])
 app.include_router(companies.router, prefix="/api/companies", tags=["companies"])
 app.include_router(leads.router, prefix="/api/leads", tags=["leads"])
@@ -71,6 +71,33 @@ app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
 @app.get("/health")
 async def health():
     return {"status": "healthy", "version": "0.1.0"}
+
+
+@app.get("/health/detailed")
+async def health_detailed():
+    health_status = await check_all_health()
+    return {
+        "status": "healthy" if all(s.get("status") == "healthy" for s in health_status.values()) else "degraded",
+        "services": health_status,
+    }
+
+
+@app.get("/health/db")
+async def health_db():
+    status = await check_database_health()
+    return status
+
+
+@app.get("/health/redis")
+async def health_redis():
+    status = await check_redis_health()
+    return status
+
+
+@app.get("/health/elasticsearch")
+async def health_elasticsearch():
+    status = await check_elasticsearch_health()
+    return status
 
 
 @app.get("/")

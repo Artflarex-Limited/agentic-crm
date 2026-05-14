@@ -42,14 +42,31 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
 
     # Agent settings
-    outreach_requires_approval: bool = True  # Human must approve before sending
+    outreach_requires_approval: bool = True
 
     # CORS
     allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
+    # Elasticsearch
+    elasticsearch_hosts: list[str] | None = None
+
+    # OpenTelemetry Tracing
+    otel_exporter_endpoint: str = ""
+
+    # ML Model Service
+    ml_model_service_url: str = "http://localhost:8001"
+    ml_inference_timeout: int = 30
+
+    # Celery
+    celery_broker_url: str = "redis://localhost:6379/0"
+    celery_result_backend: str = "redis://localhost:6379/0"
+    celery_task_time_limit: int = 300
+    celery_worker_concurrency: int = 4
+
     class Config:
         env_file = ".env"
         case_sensitive = False
+        env_file_nested_delimiter = "__"
 
 
 @lru_cache
