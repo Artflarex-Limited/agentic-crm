@@ -40,6 +40,19 @@ async def create_deal(data: DealCreate, db: AsyncSession = Depends(get_db)):
     db.add(deal)
     await db.commit()
     await db.refresh(deal)
+
+    if deal.value and deal.value > 0:
+        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
+        ga4_service = await get_ga4_service()
+        contact = deal.contact
+        await ga4_service.track_generate_rfq(
+            client_id=generate_ga_client_id(),
+            deal_id=deal.id,
+            deal_value=deal.value,
+            lead_id=deal.lead_id if hasattr(deal, "lead_id") else None,
+            user_email=contact.email if contact else None,
+        )
+
     return deal
 
 
@@ -49,10 +62,26 @@ async def update_deal(deal_id: int, data: DealUpdate, db: AsyncSession = Depends
     deal = result.scalar_one_or_none()
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
+
+    old_stage = deal.stage
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(deal, key, value)
     await db.commit()
     await db.refresh(deal)
+
+    if data.stage and data.stage != old_stage:
+        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
+        ga4_service = await get_ga4_service()
+        contact = deal.contact
+        await ga4_service.track_deal_stage_changed(
+            client_id=generate_ga_client_id(),
+            deal_id=deal.id,
+            old_stage=old_stage,
+            new_stage=data.stage,
+            deal_value=deal.value,
+            user_email=contact.email if contact else None,
+        )
+
     return deal
 
 
