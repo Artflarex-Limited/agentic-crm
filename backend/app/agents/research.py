@@ -8,22 +8,28 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.celery_app import celery_app
-from app.db.database import AsyncSessionLocal
+from app.db.database import get_async_session_local
 from app.models.models import AuditLog, Company, Lead
 from app.services.enrichment_service import EnrichmentService
+from app.agents._async import run_async
 
 logger = logging.getLogger(__name__)
 enrichment_service = EnrichmentService()
 
 
-@celery_app.task(name="agents.research.enrich_lead")
-def enrich_lead(lead_id: int):
+@celery_app.task(name="agents.research.enrich_lead", bind=True, max_retries=3)
+def enrich_lead(self, lead_id: int):
     """
     Enrich a lead with additional data from Apollo.io.
     Updates contact and company info.
     """
     async def _enrich_lead():
-        async with AsyncSessionLocal() as db:
+        SessionLocal = get_async_session_local()
+        if SessionLocal is None:
+            logger.error("Database not configured")
+            return {"status": "error", "message": "Database not configured"}
+
+        async with SessionLocal() as db:
             result = await db.execute(
                 select(Lead)
                 .where(Lead.id == lead_id)
@@ -64,16 +70,21 @@ def enrich_lead(lead_id: int):
 
             return {"status": "no_data", "lead_id": lead_id}
 
-    return _run_async(_enrich_lead())
+    return run_async(_enrich_lead())
 
 
-@celery_app.task(name="agents.research.enrich_company")
-def enrich_company(company_id: int):
+@celery_app.task(name="agents.research.enrich_company", bind=True, max_retries=3)
+def enrich_company(self, company_id: int):
     """
     Enrich company data with additional info from Apollo.io.
     """
     async def _enrich_company():
-        async with AsyncSessionLocal() as db:
+        SessionLocal = get_async_session_local()
+        if SessionLocal is None:
+            logger.error("Database not configured")
+            return {"status": "error", "message": "Database not configured"}
+
+        async with SessionLocal() as db:
             result = await db.execute(select(Company).where(Company.id == company_id))
             company = result.scalar_one_or_none()
             if not company:
@@ -98,15 +109,4 @@ def enrich_company(company_id: int):
 
             return {"status": "no_data", "company_id": company_id}
 
-    return _run_async(_enrich_company())
-
-
-def _run_async(coro):
-    import asyncio
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop = asyncio.get_event_loop()
-    return loop.run_until_complete(coro)
+    return run_async(_enrich_company())

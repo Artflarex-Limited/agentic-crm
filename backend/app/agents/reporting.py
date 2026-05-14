@@ -8,20 +8,26 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, select
 
 from app.celery_app import celery_app
-from app.db.database import AsyncSessionLocal
+from app.db.database import get_async_session_local
 from app.models.models import Activity, AuditLog, Deal, DealStage, Lead, LeadStage
+from app.agents._async import run_async
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="agents.reporting.daily_summary")
-def daily_summary() -> dict:
+@celery_app.task(name="agents.reporting.daily_summary", bind=True, max_retries=3)
+def daily_summary(self) -> dict:
     """
     Generate daily summary of CRM activity.
     Returns stats and recent activity.
     """
     async def _daily_summary():
-        async with AsyncSessionLocal() as db:
+        SessionLocal = get_async_session_local()
+        if SessionLocal is None:
+            logger.error("Database not configured")
+            return {"status": "error", "message": "Database not configured"}
+
+        async with SessionLocal() as db:
             today = datetime.utcnow().date()
             yesterday_start = datetime.combine(today - timedelta(days=1), datetime.min.time())
             today_start = datetime.combine(today, datetime.min.time())
@@ -69,16 +75,21 @@ def daily_summary() -> dict:
                 ],
             }
 
-    return _run_async(_daily_summary())
+    return run_async(_daily_summary())
 
 
-@celery_app.task(name="agents.reporting.pipeline_alert")
-def pipeline_alert() -> dict:
+@celery_app.task(name="agents.reporting.pipeline_alert", bind=True, max_retries=3)
+def pipeline_alert(self) -> dict:
     """
     Check for stalled deals and send alerts.
     """
     async def _pipeline_alert():
-        async with AsyncSessionLocal() as db:
+        SessionLocal = get_async_session_local()
+        if SessionLocal is None:
+            logger.error("Database not configured")
+            return {"status": "error", "message": "Database not configured"}
+
+        async with SessionLocal() as db:
             stalled_result = await db.execute(
                 select(Deal)
                 .where(Deal.stage.in_([DealStage.LEAD, DealStage.QUALIFIED, DealStage.PROPOSAL]))
@@ -111,16 +122,21 @@ def pipeline_alert() -> dict:
                 "deals": alert_details,
             }
 
-    return _run_async(_pipeline_alert())
+    return run_async(_pipeline_alert())
 
 
-@celery_app.task(name="agents.reporting.stalled_lead_warning")
-def stalled_lead_warning(days_threshold: int = 14) -> dict:
+@celery_app.task(name="agents.reporting.stalled_lead_warning", bind=True, max_retries=3)
+def stalled_lead_warning(self, days_threshold: int = 14) -> dict:
     """
     Find leads stuck in NEW stage for too long.
     """
     async def _stalled_lead_warning():
-        async with AsyncSessionLocal() as db:
+        SessionLocal = get_async_session_local()
+        if SessionLocal is None:
+            logger.error("Database not configured")
+            return {"status": "error", "message": "Database not configured"}
+
+        async with SessionLocal() as db:
             cutoff = datetime.utcnow() - timedelta(days=days_threshold)
             result = await db.execute(
                 select(Lead)
@@ -144,15 +160,4 @@ def stalled_lead_warning(days_threshold: int = 14) -> dict:
                 "leads": warnings,
             }
 
-    return _run_async(_stalled_lead_warning())
-
-
-def _run_async(coro):
-    import asyncio
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop = asyncio.get_event_loop()
-    return loop.run_until_complete(coro)
+    return run_async(_stalled_lead_warning())

@@ -4,15 +4,20 @@ Webhook endpoints for inbound lead ingestion.
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 
+from app.core.rate_limit import limiter
+from app.core.security import validate_webhook_secret
 from app.db.database import AsyncSessionLocal
 from app.models.models import Activity, AuditLog, Company, Contact, Lead, LeadSource
 
+from app.core.config import get_settings
+
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 class InboundEmailPayload(BaseModel):
@@ -40,7 +45,9 @@ class BouncePayload(BaseModel):
 
 
 @router.post("/inbound/email")
+@limiter.limit(settings.rate_limit_webhooks)
 async def inbound_email(
+    request: Request,
     payload: InboundEmailPayload,
     x_webhook_secret: str | None = Header(None, alias="X-Webhook-Secret"),
 ):
@@ -48,14 +55,8 @@ async def inbound_email(
     Receive inbound email leads.
     Creates contact and lead from email.
     """
-    from app.core.config import get_settings
-    settings = get_settings()
-
-    if settings.outreach_requires_approval:
-        webhook_secret = x_webhook_secret or ""
-        expected = getattr(settings, "webhook_secret", "")
-        if expected and webhook_secret != expected:
-            raise HTTPException(status_code=401, detail="Invalid webhook secret")
+    if not validate_webhook_secret(x_webhook_secret or "", settings.webhook_secret):
+        raise HTTPException(status_code=401, detail="Invalid webhook secret")
 
     async with AsyncSessionLocal() as db:
         name_parts = (payload.from_name or "").split(" ", 1)
@@ -91,7 +92,8 @@ async def inbound_email(
 
 
 @router.post("/inbound/form")
-async def inbound_form(payload: WebFormPayload):
+@limiter.limit(settings.rate_limit_webhooks)
+async def inbound_form(request: Request, payload: WebFormPayload):
     """
     Receive web form submissions.
     Creates contact and lead.
@@ -139,7 +141,8 @@ async def inbound_form(payload: WebFormPayload):
 
 
 @router.post("/email/bounce")
-async def email_bounce(payload: BouncePayload):
+@limiter.limit(settings.rate_limit_webhooks)
+async def email_bounce(request: Request, payload: BouncePayload):
     """
     Receive bounce notifications from email provider.
     """
@@ -156,7 +159,8 @@ async def email_bounce(payload: BouncePayload):
 
 
 @router.post("/email/open")
-async def email_open(message_id: str, recipient: str):
+@limiter.limit(settings.rate_limit_webhooks)
+async def email_open(request: Request, message_id: str, recipient: str):
     """
     Track email opens (pixel or webhook from provider).
     """
@@ -174,7 +178,8 @@ async def email_open(message_id: str, recipient: str):
 
 
 @router.post("/email/reply")
-async def email_reply(message_id: str, recipient: str, body: str):
+@limiter.limit(settings.rate_limit_webhooks)
+async def email_reply(request: Request, message_id: str, recipient: str, body: str):
     """
     Track email replies.
     """

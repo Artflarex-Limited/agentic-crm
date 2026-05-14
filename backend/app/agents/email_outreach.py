@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.celery_app import celery_app
-from app.db.database import AsyncSessionLocal
+from app.db.database import get_async_session_local
 from app.models.models import (
     Activity,
     ActivityType,
@@ -19,20 +19,26 @@ from app.models.models import (
     SequenceEnrollment,
 )
 from app.services.email_service import EmailService
+from app.agents._async import run_async
 
 logger = logging.getLogger(__name__)
 email_service = EmailService()
 
 
-@celery_app.task(name="agents.email_outreach.send_sequence")
-def send_sequence(lead_id: int, sequence_id: int):
+@celery_app.task(name="agents.email_outreach.send_sequence", bind=True, max_retries=3)
+def send_sequence(self, lead_id: int, sequence_id: int):
     """
     Process next step in an email sequence for a lead.
     Sends email, logs activity, advances step.
     """
 
     async def _send_sequence():
-        async with AsyncSessionLocal() as db:
+        SessionLocal = get_async_session_local()
+        if SessionLocal is None:
+            logger.error("Database not configured")
+            return {"status": "error", "message": "Database not configured"}
+
+        async with SessionLocal() as db:
             enrollment = await db.execute(
                 select(SequenceEnrollment)
                 .where(SequenceEnrollment.lead_id == lead_id)
@@ -87,7 +93,7 @@ def send_sequence(lead_id: int, sequence_id: int):
                     contact_id=contact.id,
                     type=ActivityType.EMAIL_SENT,
                     content=step.get("content", "")[:500],
-                    metadata={
+                    activity_meta={
                         "sequence_id": sequence_id,
                         "step": current_step,
                         "subject": step.get("subject"),
@@ -109,22 +115,30 @@ def send_sequence(lead_id: int, sequence_id: int):
                 await db.commit()
                 return {"status": "sent", "lead_id": lead_id, "step": current_step}
             else:
-                return {"status": "error", "message": "Failed to send email"}
+                try:
+                    self.retry(countdown=60, exc=Exception("Email send failed"))
+                except Exception:
+                    return {"status": "error", "message": "Failed to send email"}
 
-    return _run_async(_send_sequence())
+    return run_async(_send_sequence())
 
 
-@celery_app.task(name="agents.email_outreach.process_bounce")
-def process_bounce(message_id: str, bounce_type: str, details: dict):
+@celery_app.task(name="agents.email_outreach.process_bounce", bind=True, max_retries=3)
+def process_bounce(self, message_id: str, bounce_type: str, details: dict):
     """
     Handle bounced email notification.
     Marks lead appropriately and logs the bounce.
     """
     async def _process_bounce():
-        async with AsyncSessionLocal() as db:
+        SessionLocal = get_async_session_local()
+        if SessionLocal is None:
+            logger.error("Database not configured")
+            return {"status": "error", "message": "Database not configured"}
+
+        async with SessionLocal() as db:
             result = await db.execute(
                 select(Activity)
-                .where(Activity.metadata.op("->>")("message_id") == message_id)
+                .where(Activity.activity_meta.op("->>")("message_id") == message_id)
                 .options(selectinload(Activity.lead))
             )
             activity = result.scalar_one_or_none()
@@ -145,17 +159,22 @@ def process_bounce(message_id: str, bounce_type: str, details: dict):
             await db.commit()
             return {"status": "processed", "lead_id": lead.id}
 
-    return _run_async(_process_bounce())
+    return run_async(_process_bounce())
 
 
-@celery_app.task(name="agents.email_outreach.check_engagement")
-def check_engagement(lead_id: int):
+@celery_app.task(name="agents.email_outreach.check_engagement", bind=True, max_retries=3)
+def check_engagement(self, lead_id: int):
     """
     Check if a lead has opened/replied to recent emails.
     Updates lead score based on engagement.
     """
     async def _check_engagement():
-        async with AsyncSessionLocal() as db:
+        SessionLocal = get_async_session_local()
+        if SessionLocal is None:
+            logger.error("Database not configured")
+            return {"status": "error", "message": "Database not configured"}
+
+        async with SessionLocal() as db:
             result = await db.execute(
                 select(Activity)
                 .where(Activity.lead_id == lead_id)
@@ -184,15 +203,4 @@ def check_engagement(lead_id: int):
 
             return {"status": "error", "message": "Lead not found"}
 
-    return _run_async(_check_engagement())
-
-
-def _run_async(coro):
-    import asyncio
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop = asyncio.get_event_loop()
-    return loop.run_until_complete(coro)
+    return run_async(_check_engagement())

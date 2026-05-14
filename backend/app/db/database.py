@@ -15,10 +15,9 @@ _async_session_local = None
 def get_engine():
     global _engine
     if _engine is None:
-        database_url = os.environ.get(
-            "DATABASE_URL",
-            "postgresql+asyncpg://agentic_user:agentic_secret_pass@localhost:5432/agentic_crm"
-        )
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            raise ValueError("DATABASE_URL environment variable is required")
         _engine = create_async_engine(
             database_url,
             echo=False,
@@ -32,8 +31,17 @@ def get_engine():
 def get_async_session_local():
     global _async_session_local
     if _async_session_local is None:
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            return None
         _async_session_local = async_sessionmaker(
-            get_engine(),
+            create_async_engine(
+                database_url,
+                echo=False,
+                pool_size=20,
+                max_overflow=10,
+                pool_pre_ping=True,
+            ),
             class_=AsyncSession,
             expire_on_commit=False,
         )
@@ -44,11 +52,13 @@ def get_AsyncSessionLocal():
     return get_async_session_local()
 
 
-AsyncSessionLocal = get_async_session_local()
+AsyncSessionLocal = None
 
 
 async def get_db():
     async_session = get_async_session_local()
+    if async_session is None:
+        raise ValueError("Database not configured. Set DATABASE_URL environment variable.")
     async with async_session() as session:
         try:
             yield session
