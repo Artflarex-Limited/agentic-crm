@@ -84,3 +84,47 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  deploy:
+    name: Deploy to Kubernetes
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Deploy backend
+        run: |
+          cd kubernetes/overlays/${{ github.event.inputs.environment || 'staging' }}
+          kubectl set image deployment/agentic-crm-backend backend=${{ needs.build-and-push.outputs.backend_tag }} --namespace=default
+          kubectl rollout status deployment/agentic-crm-backend --namespace=default --timeout=300s
+
+      - name: Deploy frontend
+        run: |
+          kubectl set image deployment/agentic-crm-frontend frontend=${{ needs.build-and-push.outputs.frontend_tag }} --namespace=default
+          kubectl rollout status deployment/agentic-crm-frontend --namespace=default --timeout=300s
+
+      - name: Deploy celery
+        run: |
+          kubectl set image deployment/agentic-crm-celery celery=${{ needs.build-and-push.outputs.backend_tag }} --namespace=default
+          kubectl rollout status deployment/agentic-crm-celery --namespace=default --timeout=300s
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods --namespace=default
+          kubectl get ingress --namespace=default
+
