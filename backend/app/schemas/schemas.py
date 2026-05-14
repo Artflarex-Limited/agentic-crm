@@ -66,11 +66,25 @@ class LeadUpdate(BaseModel):
     notes: str | None = None
     assigned_agent_id: int | None = None
     snooze_until: datetime | None = None
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_term: str | None = None
+    utm_content: str | None = None
+    hubspot_contact_id: str | None = None
+    ga_client_id: str | None = None
 
 
 class LeadResponse(LeadCreate):
     id: int
     last_contacted_at: datetime | None
+    utm_source: str | None
+    utm_medium: str | None
+    utm_campaign: str | None
+    utm_term: str | None
+    utm_content: str | None
+    hubspot_contact_id: str | None
+    ga_client_id: str | None
     created_at: datetime
     updated_at: datetime
     contact: ContactResponse | None = None

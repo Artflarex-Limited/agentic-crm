@@ -26,6 +26,12 @@ class InboundEmailPayload(BaseModel):
     subject: str
     body: str
     received_at: str | None = None
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_term: str | None = None
+    utm_content: str | None = None
+    ga_client_id: str | None = None
 
 
 class WebFormPayload(BaseModel):
@@ -35,6 +41,13 @@ class WebFormPayload(BaseModel):
     company: str | None = None
     message: str | None = None
     source_url: str | None = None
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_term: str | None = None
+    utm_content: str | None = None
+    ga_client_id: str | None = None
+    hubspot_contact_id: str | None = None
 
 
 class BouncePayload(BaseModel):
@@ -75,6 +88,12 @@ async def inbound_email(
             contact_id=contact.id,
             source=LeadSource.EMAIL,
             score=30,
+            utm_source=payload.utm_source,
+            utm_medium=payload.utm_medium,
+            utm_campaign=payload.utm_campaign,
+            utm_term=payload.utm_term,
+            utm_content=payload.utm_content,
+            ga_client_id=payload.ga_client_id,
         )
         db.add(lead)
 
@@ -82,10 +101,22 @@ async def inbound_email(
             action="lead_created",
             entity_type="lead",
             entity_id=lead.id,
-            details={"source": "inbound_email", "from_email": payload.from_email},
+            details={"source": "inbound_email", "from_email": payload.from_email, "utm_source": payload.utm_source},
         )
         db.add(audit)
         await db.commit()
+
+        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
+        ga4_service = await get_ga4_service()
+        if payload.ga_client_id or payload.from_email:
+            await ga4_service.track_lead_created(
+                client_id=payload.ga_client_id or generate_ga_client_id(),
+                lead_id=lead.id,
+                source="email",
+                utm_source=payload.utm_source,
+                utm_campaign=payload.utm_campaign,
+                user_email=payload.from_email,
+            )
 
         logger.info(f"Inbound email lead created: {lead.id}")
         return {"status": "created", "lead_id": lead.id}
@@ -124,6 +155,13 @@ async def inbound_form(request: Request, payload: WebFormPayload):
             source=LeadSource.WEB,
             score=25,
             notes=payload.message,
+            utm_source=payload.utm_source,
+            utm_medium=payload.utm_medium,
+            utm_campaign=payload.utm_campaign,
+            utm_term=payload.utm_term,
+            utm_content=payload.utm_content,
+            ga_client_id=payload.ga_client_id,
+            hubspot_contact_id=payload.hubspot_contact_id,
         )
         db.add(lead)
 
@@ -131,9 +169,19 @@ async def inbound_form(request: Request, payload: WebFormPayload):
             action="lead_created",
             entity_type="lead",
             entity_id=lead.id,
-            details={"source": "web_form", "email": payload.email},
+            details={"source": "web_form", "email": payload.email, "utm_source": payload.utm_source, "utm_campaign": payload.utm_campaign},
         )
         db.add(audit)
+
+        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
+        ga4_service = await get_ga4_service()
+        if payload.ga_client_id or payload.email:
+            await ga4_service.track_form_submission(
+                client_id=payload.ga_client_id or generate_ga_client_id(),
+                form_name="web_form",
+                lead_id=lead.id,
+                user_email=payload.email,
+            )
         await db.commit()
 
         logger.info(f"Web form lead created: {lead.id}")

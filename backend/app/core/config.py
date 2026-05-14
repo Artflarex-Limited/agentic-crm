@@ -41,6 +41,14 @@ class Settings(BaseSettings):
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
 
+    # HubSpot CRM
+    hubspot_api_key: str = ""
+    hubspot_portal_id: str = ""
+
+    # Google Analytics 4
+    ga4_measurement_id: str = ""
+    ga4_api_secret: str = ""
+
     # Agent settings
     outreach_requires_approval: bool = True
 

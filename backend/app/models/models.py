@@ -124,6 +124,13 @@ class Lead(Base):
     assigned_agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
     snooze_until = Column(DateTime, nullable=True)
     last_contacted_at = Column(DateTime, nullable=True)
+    utm_source = Column(String(255), nullable=True)
+    utm_medium = Column(String(255), nullable=True)
+    utm_campaign = Column(String(255), nullable=True)
+    utm_term = Column(String(255), nullable=True)
+    utm_content = Column(String(255), nullable=True)
+    hubspot_contact_id = Column(String(255), nullable=True)
+    ga_client_id = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
