@@ -3,10 +3,10 @@
 # Stage 1: Builder
 FROM --platform=$BUILDPLATFORM python:3.12-slim AS builder
 
-WORKDIR /app
-
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
+
+WORKDIR /app
 
 RUN echo "Building for $TARGETPLATFORM"
 
