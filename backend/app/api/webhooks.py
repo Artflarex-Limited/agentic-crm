@@ -171,7 +171,7 @@ async def email_open(request: Request, message_id: str, recipient: str):
         activity = result.scalar_one_or_none()
 
         if activity:
-            activity.metadata = {**activity.metadata, "opened": True, "opened_at": datetime.utcnow().isoformat()}
+            activity.activity_meta = {**activity.activity_meta, "opened": True, "opened_at": datetime.utcnow().isoformat()}
             await db.commit()
 
         return {"status": "tracked"}
@@ -187,7 +187,7 @@ async def email_reply(request: Request, message_id: str, recipient: str, body: s
         from app.models.models import ActivityType, Lead
 
         result = await db.execute(
-            select(Activity).where(Activity.metadata.op("->>")("message_id") == message_id)
+            select(Activity).where(Activity.activity_meta.op("->>")("message_id") == message_id)
         )
         activity = result.scalar_one_or_none()
 
@@ -202,7 +202,7 @@ async def email_reply(request: Request, message_id: str, recipient: str, body: s
                 contact_id=activity.contact_id,
                 type=ActivityType.EMAIL_REPLIED,
                 content=body[:500],
-                metadata={"original_message_id": message_id},
+                activity_meta={"original_message_id": message_id},
             )
             db.add(reply_activity)
             await db.commit()
