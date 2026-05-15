@@ -25,6 +25,7 @@ from app.api import (
     dashboard,
     deals,
     leads,
+    market,
     search,
     sequences,
     webhooks,
@@ -70,6 +71,7 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"]
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
 app.include_router(categorization.router, prefix="/api/ai", tags=["ai"])
 app.include_router(search.router, prefix="/api/search", tags=["search"])
+app.include_router(market.router, prefix="/api", tags=["market"])
 
 
 @app.get("/health")

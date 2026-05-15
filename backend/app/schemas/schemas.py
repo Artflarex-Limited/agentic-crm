@@ -250,3 +250,51 @@ class MarketIntelligenceDashboard(BaseModel):
     source_effectiveness: list[SourceEffectiveness]
     agent_performance: list[AgentPerformanceMetric]
     period_days: int
+
+
+# ─── Market Intelligence (Real-time) ─────────────────────────────────────────
+class PricingTrend(BaseModel):
+    date: str
+    avg_price: float
+    min_price: float
+    max_price: float
+    volume: int
+    moving_avg_7d: float | None
+    moving_avg_30d: float | None
+
+
+class DemandForecast(BaseModel):
+    date: str
+    predicted_demand: float
+    confidence_lower: float
+    confidence_upper: float
+    trend: str  # "increasing", "decreasing", "stable"
+
+
+class CompetitorAggregate(BaseModel):
+    competitor_name: str
+    avg_price: float
+    price_range_min: float
+    price_range_max: float
+    market_share_estimate: float
+    last_updated: str
+
+
+class PriceAlert(BaseModel):
+    alert_id: str
+    alert_type: str  # "price_spike", "price_drop", "demand_anomaly", "competitor_movement"
+    severity: str  # "low", "medium", "high", "critical"
+    message: str
+    affected_category: str | None
+    detected_value: float
+    threshold_value: float
+    detected_at: str
+
+
+class MarketIntelligenceResponse(BaseModel):
+    pricing_trends: list[PricingTrend]
+    demand_forecast: list[DemandForecast]
+    competitor_aggregates: list[CompetitorAggregate]
+    active_alerts: list[PriceAlert]
+    last_refreshed: str
+    cache_ttl_seconds: int
