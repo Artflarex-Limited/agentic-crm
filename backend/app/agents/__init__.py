@@ -27,6 +27,12 @@ from app.agents.qualification import route_lead, score_lead
 from app.agents.reporting import daily_summary, pipeline_alert, stalled_lead_warning
 from app.agents.research import enrich_company, enrich_lead
 from app.agents.rfq import check_expiring_rfqs, generate_rfq_from_qualified_leads, update_stale_rfqs
+from app.agents.supplier_matching import (
+    match_rfq_to_suppliers,
+    notify_suppliers,
+    score_supplier_matches,
+    verify_supplier,
+)
 
 __all__ = [
     "AgentContext",
@@ -50,4 +56,8 @@ __all__ = [
     "stalled_lead_warning",
     "upsert_lead",
     "update_stale_rfqs",
+    "match_rfq_to_suppliers",
+    "notify_suppliers",
+    "score_supplier_matches",
+    "verify_supplier",
 ]
