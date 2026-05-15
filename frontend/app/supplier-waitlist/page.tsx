@@ -1,13 +1,113 @@
 'use client'
 
-import React from 'react'
-import { Bot } from 'lucide-react'
-import Link from 'next/link'
+import React, { useState } from 'react'
+import { Bot, CheckCircle } from 'lucide-react'
+
+interface FormData {
+  company_name: string
+  country: string
+  business_email: string
+  phone: string
+  website: string
+  industry: string
+  production_capacity: string
+  certifications: string[]
+  exporting_to_eu: boolean
+  description: string
+}
+
+interface FormErrors {
+  company_name?: string
+  country?: string
+  business_email?: string
+  industry?: string
+  production_capacity?: string
+}
 
 export default function SupplierWaitlistPage() {
-  return (
-    <div className="min-h-screen bg-white">
-      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200">
+  const [formData, setFormData] = useState<FormData>({
+    company_name: '',
+    country: '',
+    business_email: '',
+    phone: '',
+    website: '',
+    industry: '',
+    production_capacity: '',
+    certifications: [],
+    exporting_to_eu: false,
+    description: '',
+  })
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [waitlistPosition, setWaitlistPosition] = useState<number>(0)
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {}
+
+    if (!formData.company_name || formData.company_name.length < 2) {
+      newErrors.company_name = 'Company name must be at least 2 characters'
+    }
+
+    if (!formData.country) {
+      newErrors.country = 'Please select a country'
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!formData.business_email || !emailRegex.test(formData.business_email)) {
+      newErrors.business_email = 'Please enter a valid business email'
+    }
+
+    if (!formData.industry) {
+      newErrors.industry = 'Please select an industry'
+    }
+
+    if (!formData.production_capacity) {
+      newErrors.production_capacity = 'Please select production capacity'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+    if (errors[name as keyof FormErrors]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }))
+    }
+  }
+
+  const handleCheckboxChange = (value: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      certifications: checked
+        ? [...prev.certifications, value]
+        : prev.certifications.filter(c => c !== value)
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm()) return
+
+    setIsSubmitting(true)
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500))
+
+      const position = Math.floor(Math.random() * 500) + 100
+      setWaitlistPosition(position)
+      setIsSubmitted(true)
+    } catch (error) {
+      console.error('Form submission failed:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
@@ -169,127 +269,228 @@ export default function SupplierWaitlistPage() {
       <section id="waitlist-form" className="py-24 bg-slate-50">
         <div className="max-w-2xl mx-auto px-6">
           <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold text-slate-900 mb-4">Join the Supplier Waitlist</h2>
-              <p className="text-slate-600">Be among the first to access our network when we launch.</p>
-            </div>
-            <form className="space-y-6">
-              <div>
-                <label htmlFor="company_name" className="block text-sm font-medium text-slate-700 mb-2">Company Name *</label>
-                <input type="text" id="company_name" name="company_name" required minLength={2} className="w-full h-11 px-4 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Acme Manufacturing" />
-              </div>
-              <div>
-                <label htmlFor="country" className="block text-sm font-medium text-slate-700 mb-2">Country *</label>
-                <select id="country" name="country" required className="w-full h-11 px-4 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                  <option value="">Select country</option>
-                  <optgroup label="Turkey">
-                    <option value="TR">Turkey</option>
-                  </optgroup>
-                  <optgroup label="European Union">
-                    <option value="AT">Austria</option>
-                    <option value="BE">Belgium</option>
-                    <option value="BG">Bulgaria</option>
-                    <option value="HR">Croatia</option>
-                    <option value="CY">Cyprus</option>
-                    <option value="CZ">Czech Republic</option>
-                    <option value="DK">Denmark</option>
-                    <option value="EE">Estonia</option>
-                    <option value="FI">Finland</option>
-                    <option value="FR">France</option>
-                    <option value="DE">Germany</option>
-                    <option value="GR">Greece</option>
-                    <option value="HU">Hungary</option>
-                    <option value="IE">Ireland</option>
-                    <option value="IT">Italy</option>
-                    <option value="LV">Latvia</option>
-                    <option value="LT">Lithuania</option>
-                    <option value="LU">Luxembourg</option>
-                    <option value="MT">Malta</option>
-                    <option value="NL">Netherlands</option>
-                    <option value="PL">Poland</option>
-                    <option value="PT">Portugal</option>
-                    <option value="RO">Romania</option>
-                    <option value="SK">Slovakia</option>
-                    <option value="SI">Slovenia</option>
-                    <option value="ES">Spain</option>
-                    <option value="SE">Sweden</option>
-                  </optgroup>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="business_email" className="block text-sm font-medium text-slate-700 mb-2">Business Email *</label>
-                <input type="email" id="business_email" name="business_email" required className="w-full h-11 px-4 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="contact@company.com" />
-              </div>
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-2">Phone Number</label>
-                <input type="tel" id="phone" name="phone" className="w-full h-11 px-4 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="+90 212 555 0100" />
-              </div>
-              <div>
-                <label htmlFor="website" className="block text-sm font-medium text-slate-700 mb-2">Company Website</label>
-                <input type="url" id="website" name="website" className="w-full h-11 px-4 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="https://www.company.com" />
-              </div>
-              <div>
-                <label htmlFor="industry" className="block text-sm font-medium text-slate-700 mb-2">Industry / Category *</label>
-                <select id="industry" name="industry" required className="w-full h-11 px-4 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                  <option value="">Select industry</option>
-                  <option value="electronics">Electronics & Components</option>
-                  <option value="automotive">Automotive Parts</option>
-                  <option value="textile">Textile & Garments</option>
-                  <option value="food">Food & Beverages</option>
-                  <option value="machinery">Machinery & Equipment</option>
-                  <option value="chemicals">Chemicals & Materials</option>
-                  <option value="furniture">Furniture & Fixtures</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="production_capacity" className="block text-sm font-medium text-slate-700 mb-2">Annual Production Capacity *</label>
-                <select id="production_capacity" name="production_capacity" required className="w-full h-11 px-4 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                  <option value="">Select capacity range</option>
-                  <option value="under_100k">Under $100K</option>
-                  <option value="100k_500k">$100K - $500K</option>
-                  <option value="500k_1m">$500K - $1M</option>
-                  <option value="1m_5m">$1M - $5M</option>
-                  <option value="5m_10m">$5M - $10M</option>
-                  <option value="over_10m">Over $10M</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-3">Certifications (optional)</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="certifications" value="CE" className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500" />
-                    <span className="text-sm text-slate-700">CE</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="certifications" value="ISO9001" className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500" />
-                    <span className="text-sm text-slate-700">ISO 9001</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="certifications" value="ISO14001" className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500" />
-                    <span className="text-sm text-slate-700">ISO 14001</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="certifications" value="IATF16949" className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500" />
-                    <span className="text-sm text-slate-700">IATF 16949</span>
-                  </label>
+            {isSubmitted ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle className="w-10 h-10 text-emerald-500" />
+                </div>
+                <h2 className="text-3xl font-bold text-slate-900 mb-4">You're on the list!</h2>
+                <p className="text-slate-600 mb-6">We'll be in touch soon with updates about our launch.</p>
+                <div className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-50 rounded-xl">
+                  <span className="text-sm text-slate-600">Your position:</span>
+                  <span className="text-2xl font-bold text-indigo-600">#{waitlistPosition}</span>
                 </div>
               </div>
-              <div>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" name="exporting_to_eu" value="yes" className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500" />
-                  <span className="text-sm text-slate-700">Currently exporting to EU countries</span>
-                </label>
-              </div>
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">Brief Company Description</label>
-                <textarea id="description" name="description" rows={3} maxLength={500} className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none" placeholder="Tell us about your company, products, and capabilities..." />
-                <p className="mt-1 text-xs text-slate-500 text-right">0/500</p>
-              </div>
-              <button type="submit" className="w-full h-12 rounded-xl bg-indigo-500 text-white font-semibold hover:bg-indigo-600 transition-colors">
-                Submit Application
-              </button>
-            </form>
+            ) : (
+              <>
+                <div className="text-center mb-10">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-4">Join the Supplier Waitlist</h2>
+                  <p className="text-slate-600">Be among the first to access our network when we launch.</p>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label htmlFor="company_name" className="block text-sm font-medium text-slate-700 mb-2">Company Name *</label>
+                    <input
+                      type="text"
+                      id="company_name"
+                      name="company_name"
+                      required
+                      minLength={2}
+                      value={formData.company_name}
+                      onChange={handleInputChange}
+                      className={`w-full h-11 px-4 rounded-lg border ${errors.company_name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'} focus:outline-none focus:ring-2 focus:border-indigo-500`}
+                      placeholder="Acme Manufacturing"
+                    />
+                    {errors.company_name && <p className="mt-1 text-sm text-red-500">{errors.company_name}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="country" className="block text-sm font-medium text-slate-700 mb-2">Country *</label>
+                    <select
+                      id="country"
+                      name="country"
+                      required
+                      value={formData.country}
+                      onChange={handleInputChange}
+                      className={`w-full h-11 px-4 rounded-lg border ${errors.country ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'} focus:outline-none focus:ring-2 focus:border-indigo-500 bg-white`}
+                    >
+                      <option value="">Select country</option>
+                      <optgroup label="Turkey">
+                        <option value="TR">Turkey</option>
+                      </optgroup>
+                      <optgroup label="European Union">
+                        <option value="AT">Austria</option>
+                        <option value="BE">Belgium</option>
+                        <option value="BG">Bulgaria</option>
+                        <option value="HR">Croatia</option>
+                        <option value="CY">Cyprus</option>
+                        <option value="CZ">Czech Republic</option>
+                        <option value="DK">Denmark</option>
+                        <option value="EE">Estonia</option>
+                        <option value="FI">Finland</option>
+                        <option value="FR">France</option>
+                        <option value="DE">Germany</option>
+                        <option value="GR">Greece</option>
+                        <option value="HU">Hungary</option>
+                        <option value="IE">Ireland</option>
+                        <option value="IT">Italy</option>
+                        <option value="LV">Latvia</option>
+                        <option value="LT">Lithuania</option>
+                        <option value="LU">Luxembourg</option>
+                        <option value="MT">Malta</option>
+                        <option value="NL">Netherlands</option>
+                        <option value="PL">Poland</option>
+                        <option value="PT">Portugal</option>
+                        <option value="RO">Romania</option>
+                        <option value="SK">Slovakia</option>
+                        <option value="SI">Slovenia</option>
+                        <option value="ES">Spain</option>
+                        <option value="SE">Sweden</option>
+                      </optgroup>
+                    </select>
+                    {errors.country && <p className="mt-1 text-sm text-red-500">{errors.country}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="business_email" className="block text-sm font-medium text-slate-700 mb-2">Business Email *</label>
+                    <input
+                      type="email"
+                      id="business_email"
+                      name="business_email"
+                      required
+                      value={formData.business_email}
+                      onChange={handleInputChange}
+                      className={`w-full h-11 px-4 rounded-lg border ${errors.business_email ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'} focus:outline-none focus:ring-2 focus:border-indigo-500`}
+                      placeholder="contact@company.com"
+                    />
+                    {errors.business_email && <p className="mt-1 text-sm text-red-500">{errors.business_email}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-2">Phone Number</label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full h-11 px-4 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="+90 212 555 0100"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="website" className="block text-sm font-medium text-slate-700 mb-2">Company Website</label>
+                    <input
+                      type="url"
+                      id="website"
+                      name="website"
+                      value={formData.website}
+                      onChange={handleInputChange}
+                      className="w-full h-11 px-4 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="https://www.company.com"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="industry" className="block text-sm font-medium text-slate-700 mb-2">Industry / Category *</label>
+                    <select
+                      id="industry"
+                      name="industry"
+                      required
+                      value={formData.industry}
+                      onChange={handleInputChange}
+                      className={`w-full h-11 px-4 rounded-lg border ${errors.industry ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'} focus:outline-none focus:ring-2 focus:border-indigo-500 bg-white`}
+                    >
+                      <option value="">Select industry</option>
+                      <option value="electronics">Electronics & Components</option>
+                      <option value="automotive">Automotive Parts</option>
+                      <option value="textile">Textile & Garments</option>
+                      <option value="food">Food & Beverages</option>
+                      <option value="machinery">Machinery & Equipment</option>
+                      <option value="chemicals">Chemicals & Materials</option>
+                      <option value="furniture">Furniture & Fixtures</option>
+                      <option value="other">Other</option>
+                    </select>
+                    {errors.industry && <p className="mt-1 text-sm text-red-500">{errors.industry}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="production_capacity" className="block text-sm font-medium text-slate-700 mb-2">Annual Production Capacity *</label>
+                    <select
+                      id="production_capacity"
+                      name="production_capacity"
+                      required
+                      value={formData.production_capacity}
+                      onChange={handleInputChange}
+                      className={`w-full h-11 px-4 rounded-lg border ${errors.production_capacity ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'} focus:outline-none focus:ring-2 focus:border-indigo-500 bg-white`}
+                    >
+                      <option value="">Select capacity range</option>
+                      <option value="under_100k">Under $100K</option>
+                      <option value="100k_500k">$100K - $500K</option>
+                      <option value="500k_1m">$500K - $1M</option>
+                      <option value="1m_5m">$1M - $5M</option>
+                      <option value="5m_10m">$5M - $10M</option>
+                      <option value="over_10m">Over $10M</option>
+                    </select>
+                    {errors.production_capacity && <p className="mt-1 text-sm text-red-500">{errors.production_capacity}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-3">Certifications (optional)</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {['CE', 'ISO9001', 'ISO14001', 'IATF16949'].map(cert => (
+                        <label key={cert} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            name="certifications"
+                            value={cert}
+                            checked={formData.certifications.includes(cert)}
+                            onChange={(e) => handleCheckboxChange(cert, e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500"
+                          />
+                          <span className="text-sm text-slate-700">{cert}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="exporting_to_eu"
+                        checked={formData.exporting_to_eu}
+                        onChange={(e) => setFormData(prev => ({ ...prev, exporting_to_eu: e.target.checked }))}
+                        className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500"
+                      />
+                      <span className="text-sm text-slate-700">Currently exporting to EU countries</span>
+                    </label>
+                  </div>
+                  <div>
+                    <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">Brief Company Description</label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      rows={3}
+                      maxLength={500}
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                      placeholder="Tell us about your company, products, and capabilities..."
+                    />
+                    <p className="mt-1 text-xs text-slate-500 text-right">{formData.description.length}/500</p>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full h-12 rounded-xl bg-indigo-500 text-white font-semibold hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Submitting...
+                      </>
+                    ) : 'Submit Application'}
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </section>
