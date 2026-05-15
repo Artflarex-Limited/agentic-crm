@@ -1,45 +1,91 @@
 'use client'
 
 import Link from 'next/link'
-import { Bot, Brain, Search, Target, ArrowRight, CheckCircle2, Zap } from 'lucide-react'
+import { Bot, Brain, Send, BarChart3, ArrowRight, CheckCircle2, Zap } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { trackPageView, trackMetaPageView } from '@/lib/tracking'
 
 const features = [
   {
     icon: Bot,
-    title: 'Product Categorization',
-    description: 'AI automatically classifies and tags your product catalog. No more manual data entry — upload once, let the agents organize everything.',
+    title: 'Lead Sourcing',
+    description: 'AI agents automatically find prospects on LinkedIn, web, and inbound channels. Build your pipeline while you sleep.',
     color: 'text-blue-400 bg-blue-400/10',
   },
   {
-    icon: Search,
-    title: 'Semantic Search',
-    description: 'Find suppliers and leads using natural language. "Find manufacturers in Southeast Asia who can produce electronics" — and get results instantly.',
+    icon: Send,
+    title: 'Automated Outreach',
+    description: 'Personalized email and LinkedIn sequences run on autopilot. Human approval holds ensure you stay in control before any message goes out.',
     color: 'text-purple-400 bg-purple-400/10',
   },
   {
-    icon: Target,
-    title: 'Supplier Matching',
-    description: 'Our AI matches your requirements against thousands of suppliers. Confidence scores, compatibility ratings, and automated shortlisting.',
+    icon: Brain,
+    title: 'Lead Qualification',
+    description: 'AI scores and routes leads automatically. Every prospect gets enriched with company data, news, and contact info.',
     color: 'text-emerald-400 bg-emerald-400/10',
   },
   {
-    icon: Brain,
-    title: 'Market Intelligence',
-    description: 'Real-time monitoring of supplier news, pricing changes, and market trends. Stay ahead with AI-powered insights delivered to your inbox.',
+    icon: BarChart3,
+    title: 'Pipeline Visibility',
+    description: 'Real-time dashboard shows every deal, stage, and agent action. Full audit trail so nothing falls through the cracks.',
     color: 'text-orange-400 bg-orange-400/10',
   },
 ]
 
 const benefits = [
-  'Zero manual data entry',
-  '24/7 AI agent operation',
-  'Full audit trail',
+  'AI agents find and qualify leads 24/7',
+  'Human-in-the-loop approval queue',
+  'LinkedIn + Email + Phone outreach',
+  'Full audit trail of every agent action',
   'Open source & self-hosted',
-  'Human-in-the-loop approvals',
-  'Connect LinkedIn, Email, Phone',
+  'Built for sales teams that move fast',
 ]
 
+const DemoSection = ({ onVisible }: { onVisible: () => void }) => {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!ref.current) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          onVisible()
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [onVisible])
+
+  return (
+    <section id="demo" className="py-16 bg-secondary/30" ref={ref}>
+      <div className="container mx-auto px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">See Agentic CRM in Action</h2>
+            <p className="text-muted-foreground">Watch how AI agents automate your sales workflow</p>
+          </div>
+          <div className="aspect-video rounded-xl border border-border bg-card overflow-hidden shadow-2xl">
+            <iframe
+              src="https://www.loom.com/embed/PLACEHOLDER"
+              className="w-full h-full"
+              allowFullScreen
+              title="Agentic CRM Demo"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function LandingPage() {
+  useEffect(() => {
+    trackPageView('/', 'Agentic CRM — AI-First CRM Platform')
+    trackMetaPageView()
+  }, [])
   return (
     <div className="min-h-screen">
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-sm">
@@ -104,24 +150,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="demo" className="py-16 bg-secondary/30">
-          <div className="container mx-auto px-6">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">See Agentic CRM in Action</h2>
-                <p className="text-muted-foreground">Watch how AI agents automate your sales workflow</p>
-              </div>
-              <div className="aspect-video rounded-xl border border-border bg-card overflow-hidden shadow-2xl">
-                <iframe
-                  src="https://www.loom.com/embed/PLACEHOLDER"
-                  className="w-full h-full"
-                  allowFullScreen
-                  title="Agentic CRM Demo"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
+        <DemoSection onVisible={() => {
+          trackPageView('/demo', 'Demo Booking — Agentic CRM')
+          trackMetaPageView()
+        }} />
 
         <section id="features" className="py-24">
           <div className="container mx-auto px-6">
