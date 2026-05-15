@@ -108,6 +108,10 @@ export default function SupplierWaitlistPage() {
       setIsSubmitting(false)
     }
   }
+
+  return (
+    <div className="min-h-screen bg-white">
+      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">

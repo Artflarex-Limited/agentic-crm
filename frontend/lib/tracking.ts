@@ -96,11 +96,9 @@ export function initMetaPixel(pixelId?: string): void {
   if (typeof window === 'undefined' || !pixelId) return
 
   window.fbq = window.fbq || function (...args: unknown[]) {
-    const ns = 'fbq'
-    const c = window[ns] as Record<string, unknown> | undefined
-    const ctx = window as unknown as Record<string, unknown>
+    const c = window.fbq as ((...args: unknown[]) => void) | undefined
     if (typeof c === 'function') {
-      c.call(ctx, ...args)
+      c(...args)
     }
   }
 

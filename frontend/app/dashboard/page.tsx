@@ -1,12 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { api, type Deal, type DealStage, type Activity, type Agent, type PipelineItem, type MarketIntelligenceDashboard, type MarketIntelligenceResponse } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { PipelineChart, StatCard, ConversionFunnel, VelocityMetric, PipelineTrend, WinLossRatio, AgentPerformancePanel, CampaignEffectiveness } from '@/components/analytics'
 import { DollarSign, Users, Target, TrendingUp, Activity as ActivityIcon, Bot, ArrowUpRight, ArrowDownRight, BarChart3, PieChart, TrendingDown, AlertTriangle, LineChart } from 'lucide-react'
+import { api, type DealStage, type Activity, type Agent, type PipelineItem, type MarketIntelligenceDashboard, type MarketIntelligenceResponse } from '@/lib/api'
+import { useEffect, useState } from 'react'
 
 const STAGES: { key: DealStage; label: string; color: string; borderColor: string }[] = [
   { key: 'lead', label: 'Lead', color: 'text-blue-400 bg-blue-400/10', borderColor: 'border-blue-400/30' },
@@ -105,9 +103,7 @@ function RevenueForecastCard({ forecast }: { forecast: { projected_revenue_30_da
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Confidence</span>
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-              {(forecast.forecast_confidence * 100).toFixed(0)}%
-            </Badge>
+            <span className="text-sm font-medium text-primary">{(forecast.forecast_confidence * 100).toFixed(0)}%</span>
           </div>
         </div>
       </CardContent>
@@ -369,9 +365,7 @@ export default function DashboardPage() {
                         <div className="p-4 rounded-lg bg-secondary/50">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm text-muted-foreground">Active Alerts</span>
-                            <Badge variant="destructive" className="text-xs">
-                              {realTimeMarketData.active_alerts.length}
-                            </Badge>
+                            <span className="text-xs font-medium text-red-400">{realTimeMarketData.active_alerts.length}</span>
                           </div>
                           {realTimeMarketData.active_alerts.length > 0 ? (
                             <div className="space-y-1">
@@ -439,75 +433,77 @@ export default function DashboardPage() {
               )}
 
               <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Deal Velocity Metrics
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 md:grid-cols-2">
-                <VelocityMetric
-                  label="Avg Deal Value"
-                  value={`$${avgDealValue.toLocaleString()}`}
-                  subValue="Per won deal"
-                  trend={5}
-                  icon={DollarSign}
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Deal Velocity Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <VelocityMetric
+                      label="Avg Deal Value"
+                      value={`$${avgDealValue.toLocaleString()}`}
+                      subValue="Per won deal"
+                      trend={5}
+                      icon={DollarSign}
+                    />
+                    <VelocityMetric
+                      label="Conversion Rate"
+                      value={`${conversionRate}%`}
+                      subValue="Lead to Won"
+                      trend={-2}
+                      icon={Target}
+                    />
+                    <VelocityMetric
+                      label="Pipeline Value"
+                      value={`$${stats.open_deals_value.toLocaleString()}`}
+                      subValue="Across all open deals"
+                      icon={TrendingUp}
+                    />
+                    <VelocityMetric
+                      label="Active Agents"
+                      value={String(activeAgents)}
+                      subValue={`${agents.length} total configured`}
+                      icon={Bot}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <PipelineTrend
+                  data={[
+                    { date: 'May 1', deals_created: 5, deals_won: 1, deals_lost: 0, revenue: 15000 },
+                    { date: 'May 5', deals_created: 8, deals_won: 2, deals_lost: 1, revenue: 28000 },
+                    { date: 'May 10', deals_created: 3, deals_won: 1, deals_lost: 0, revenue: 12000 },
+                    { date: 'May 15', deals_created: 6, deals_won: 0, deals_lost: 2, revenue: 0 },
+                  ]}
                 />
-                <VelocityMetric
-                  label="Conversion Rate"
-                  value={`${conversionRate}%`}
-                  subValue="Lead to Won"
-                  trend={-2}
-                  icon={Target}
+                <WinLossRatio won={stats.deals_by_stage['won'] || 0} lost={stats.deals_by_stage['lost'] || 0} />
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <AgentPerformancePanel
+                  agents={agents.map(a => ({
+                    agent_id: a.id,
+                    agent_name: a.name,
+                    agent_role: a.role,
+                    actions_today: 0,
+                    actions_this_week: 0,
+                    success_rate: 75,
+                  }))}
                 />
-                <VelocityMetric
-                  label="Pipeline Value"
-                  value={`$${stats.open_deals_value.toLocaleString()}`}
-                  subValue="Across all open deals"
-                  icon={TrendingUp}
-                />
-                <VelocityMetric
-                  label="Active Agents"
-                  value={String(activeAgents)}
-                  subValue={`${agents.length} total configured`}
-                  icon={Bot}
+                <CampaignEffectiveness
+                  campaigns={[
+                    { name: 'Cold Outreach', sent: 150, opened: 78, replied: 12, converted: 3 },
+                    { name: 'LinkedIn Sequence', sent: 85, opened: 52, replied: 18, converted: 5 },
+                    { name: 'Follow-up', sent: 45, opened: 32, replied: 8, converted: 2 },
+                  ]}
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <PipelineTrend
-              data={[
-                { date: 'May 1', deals_created: 5, deals_won: 1, deals_lost: 0, revenue: 15000 },
-                { date: 'May 5', deals_created: 8, deals_won: 2, deals_lost: 1, revenue: 28000 },
-                { date: 'May 10', deals_created: 3, deals_won: 1, deals_lost: 0, revenue: 12000 },
-                { date: 'May 15', deals_created: 6, deals_won: 0, deals_lost: 2, revenue: 0 },
-              ]}
-            />
-            <WinLossRatio won={stats.deals_by_stage['won'] || 0} lost={stats.deals_by_stage['lost'] || 0} />
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <AgentPerformancePanel
-              agents={agents.map(a => ({
-                agent_id: a.id,
-                agent_name: a.name,
-                agent_role: a.role,
-                actions_today: 0,
-                actions_this_week: 0,
-                success_rate: 75,
-              }))}
-            />
-            <CampaignEffectiveness
-              campaigns={[
-                { name: 'Cold Outreach', sent: 150, opened: 78, replied: 12, converted: 3 },
-                { name: 'LinkedIn Sequence', sent: 85, opened: 52, replied: 18, converted: 5 },
-                { name: 'Follow-up', sent: 45, opened: 32, replied: 8, converted: 2 },
-              ]}
-            />
-          </div>
+            </>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -551,9 +547,7 @@ export default function DashboardPage() {
                   </div>
                 ))
               )}
-              <Button variant="outline" className="w-full mt-2" size="sm" asChild>
-                <a href="/agents">View all agents</a>
-              </Button>
+              <a href="/agents" className="block w-full mt-2 text-center text-sm text-primary hover:underline">View all agents</a>
             </CardContent>
           </Card>
 
