@@ -175,6 +175,7 @@ class Agent(Base):
     assigned_leads = relationship("Lead", back_populates="assigned_agent")
     activities = relationship("Activity", back_populates="agent")
     audit_logs = relationship("AuditLog", back_populates="agent")
+    procurement_requests = relationship("ProcurementRequest", back_populates="assigned_agent")
 
 
 class Sequence(Base):
@@ -260,6 +261,50 @@ class SupplierStatus(enum.StrEnum):
     SUSPENDED = "suspended"
 
 
+class ProcurementStatus(enum.StrEnum):
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    QUOTES_RECEIVED = "quotes_received"
+    APPROVED = "approved"
+    IN_PRODUCTION = "in_production"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+
+class QuoteStatus(enum.StrEnum):
+    PENDING = "pending"
+    SENT = "sent"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+
+
+class PurchaseOrderStatus(enum.StrEnum):
+    DRAFT = "draft"
+    ISSUED = "issued"
+    CONFIRMED = "confirmed"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+
+class ShipmentStatus(enum.StrEnum):
+    PREPARING = "preparing"
+    IN_TRANSIT = "in_transit"
+    CUSTOMS = "customs"
+    DELIVERED = "delivered"
+    EXCEPTION = "exception"
+
+
+class InvoiceStatus(enum.StrEnum):
+    DRAFT = "draft"
+    SENT = "sent"
+    PAID = "paid"
+    OVERDUE = "overdue"
+    CANCELLED = "cancelled"
+
+
 class Supplier(Base):
     __tablename__ = "suppliers"
 
@@ -281,5 +326,122 @@ class Supplier(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    quotes = relationship("Quote", back_populates="supplier")
+    purchase_orders = relationship("PurchaseOrder", back_populates="supplier")
+
     def __repr__(self):
         return f"<Supplier(id={self.id}, company='{self.company_name}', status='{self.status}')>"
+
+
+class ProcurementRequest(Base):
+    __tablename__ = "procurement_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    category_id = Column(Integer, ForeignKey("product_categories.id"), nullable=True)
+    quantity = Column(String(100), nullable=True)
+    target_price = Column(Float, nullable=True)
+    currency = Column(String(10), default="USD")
+    requested_delivery_date = Column(DateTime, nullable=True)
+    status = Column(SQLEnum(ProcurementStatus), default=ProcurementStatus.DRAFT)
+    priority = Column(String(20), default="medium")
+    created_by = Column(String(255), nullable=True)
+    assigned_agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
+    extra_data = Column(JSON, default={})
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    category = relationship("ProductCategory")
+    assigned_agent = relationship("Agent", back_populates="procurement_requests")
+    quotes = relationship("Quote", back_populates="procurement_request")
+    purchase_orders = relationship("PurchaseOrder", back_populates="procurement_request")
+
+
+class Quote(Base):
+    __tablename__ = "quotes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    procurement_request_id = Column(Integer, ForeignKey("procurement_requests.id"), nullable=False)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=False)
+    price = Column(Float, nullable=False)
+    currency = Column(String(10), default="USD")
+    lead_time_days = Column(Integer, nullable=True)
+    validity_days = Column(Integer, default=30)
+    notes = Column(Text, nullable=True)
+    status = Column(SQLEnum(QuoteStatus), default=QuoteStatus.PENDING)
+    submitted_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+    extra_data = Column(JSON, default={})
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    procurement_request = relationship("ProcurementRequest", back_populates="quotes")
+    supplier = relationship("Supplier", back_populates="quotes")
+    purchase_order = relationship("PurchaseOrder", back_populates="quote", uselist=False)
+
+
+class PurchaseOrder(Base):
+    __tablename__ = "purchase_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    procurement_request_id = Column(Integer, ForeignKey("procurement_requests.id"), nullable=False)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=False)
+    quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=True)
+    order_number = Column(String(100), nullable=False, unique=True)
+    total_amount = Column(Float, nullable=False)
+    currency = Column(String(10), default="USD")
+    status = Column(SQLEnum(PurchaseOrderStatus), default=PurchaseOrderStatus.DRAFT)
+    expected_delivery_date = Column(DateTime, nullable=True)
+    actual_delivery_date = Column(DateTime, nullable=True)
+    shipping_address = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    extra_data = Column(JSON, default={})
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    procurement_request = relationship("ProcurementRequest", back_populates="purchase_orders")
+    supplier = relationship("Supplier", back_populates="purchase_orders")
+    quote = relationship("Quote", back_populates="purchase_order")
+    shipments = relationship("Shipment", back_populates="purchase_order")
+    invoices = relationship("Invoice", back_populates="purchase_order")
+
+
+class Shipment(Base):
+    __tablename__ = "shipments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    purchase_order_id = Column(Integer, ForeignKey("purchase_orders.id"), nullable=False)
+    tracking_number = Column(String(255), nullable=True)
+    carrier = Column(String(100), nullable=True)
+    status = Column(SQLEnum(ShipmentStatus), default=ShipmentStatus.PREPARING)
+    shipping_date = Column(DateTime, nullable=True)
+    estimated_delivery_date = Column(DateTime, nullable=True)
+    actual_delivery_date = Column(DateTime, nullable=True)
+    shipping_address = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    extra_data = Column(JSON, default={})
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    purchase_order = relationship("PurchaseOrder", back_populates="shipments")
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    purchase_order_id = Column(Integer, ForeignKey("purchase_orders.id"), nullable=False)
+    invoice_number = Column(String(100), nullable=False, unique=True)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), default="USD")
+    status = Column(SQLEnum(InvoiceStatus), default=InvoiceStatus.DRAFT)
+    issue_date = Column(DateTime, nullable=True)
+    due_date = Column(DateTime, nullable=True)
+    paid_date = Column(DateTime, nullable=True)
+    notes = Column(Text, nullable=True)
+    extra_data = Column(JSON, default={})
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    purchase_order = relationship("PurchaseOrder", back_populates="invoices")
