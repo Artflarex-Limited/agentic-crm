@@ -238,3 +238,48 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     agent = relationship("Agent", back_populates="audit_logs")
+
+
+class ProductCategory(Base):
+    __tablename__ = "product_categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family = Column(String(100), nullable=False, index=True)
+    cls = Column(String(100), nullable=False, index=True)
+    commodity = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    keywords = Column(JSON, default=[])
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SupplierStatus(enum.StrEnum):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    REJECTED = "rejected"
+    SUSPENDED = "suspended"
+
+
+class Supplier(Base):
+    __tablename__ = "suppliers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_name = Column(String(255), nullable=False)
+    country = Column(String(100), nullable=False, index=True)
+    business_email = Column(String(255), nullable=False)
+    phone = Column(String(50), nullable=True)
+    website = Column(String(500), nullable=True)
+    industry = Column(String(200), nullable=False, index=True)
+    production_capacity = Column(String(100), nullable=True)
+    certifications = Column(JSON, default=[])
+    exporting_to_eu = Column(Boolean, default=False)
+    description = Column(Text, nullable=True)
+    waitlist_position = Column(Integer, nullable=True)
+    status = Column(SQLEnum(SupplierStatus), default=SupplierStatus.PENDING)
+    verified_at = Column(DateTime, nullable=True)
+    extra_data = Column(JSON, default={})
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Supplier(id={self.id}, company='{self.company_name}', status='{self.status}')>"

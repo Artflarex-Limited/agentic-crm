@@ -19,11 +19,13 @@ from app.core.clients import (
 from app.api import (
     activities,
     agents,
+    categorization,
     companies,
     contacts,
     dashboard,
     deals,
     leads,
+    search,
     sequences,
     webhooks,
 )
@@ -66,6 +68,8 @@ app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(sequences.router, prefix="/api/sequences", tags=["sequences"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
+app.include_router(categorization.router, prefix="/api/ai", tags=["ai"])
+app.include_router(search.router, prefix="/api/search", tags=["search"])
 
 
 @app.get("/health")

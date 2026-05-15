@@ -26,6 +26,7 @@ from app.models.models import (
     Lead,
     LeadSource,
     LeadStage,
+    ProductCategory,
     Sequence,
 )
 
@@ -192,3 +193,18 @@ async def sample_activity(db_session: AsyncSession, sample_lead: Lead, sample_ag
 @pytest.fixture
 def auth_headers() -> dict:
     return {"Authorization": "Bearer test-token"}
+
+
+@pytest_asyncio.fixture
+async def sample_product_category(db_session: AsyncSession) -> ProductCategory:
+    category = ProductCategory(
+        family="Machinery",
+        cls="cnc",
+        commodity="CNC Milling Machine",
+        description="CNC milling machine for industrial machining",
+        keywords=["cnc", "milling", "machine", "industrial"],
+    )
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+    return category
