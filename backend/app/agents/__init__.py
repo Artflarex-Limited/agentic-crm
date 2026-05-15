@@ -26,16 +26,19 @@ from app.agents.lead_sourcing import find_leads_from_linkedin, upsert_lead
 from app.agents.qualification import route_lead, score_lead
 from app.agents.reporting import daily_summary, pipeline_alert, stalled_lead_warning
 from app.agents.research import enrich_company, enrich_lead
+from app.agents.rfq import check_expiring_rfqs, generate_rfq_from_qualified_leads, update_stale_rfqs
 
 __all__ = [
     "AgentContext",
     "AgentTaskMixin",
     "check_engagement",
+    "check_expiring_rfqs",
     "daily_summary",
     "enrich_company",
     "enrich_lead",
     "enroll_in_sequence",
     "find_leads_from_linkedin",
+    "generate_rfq_from_qualified_leads",
     "pipeline_alert",
     "process_bounce",
     "process_cold_leads",
@@ -46,4 +49,5 @@ __all__ = [
     "snooze_lead",
     "stalled_lead_warning",
     "upsert_lead",
+    "update_stale_rfqs",
 ]
