@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type FormEvent } from 'react'
 import { identifyHubSpotContact, getStoredUTM, trackFormSubmission, trackRFQGenerated } from '@/lib/tracking'
+import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,7 +35,7 @@ export function HubSpotForm({
     }
   }, [])
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
     const data: Record<string, string> = {}
@@ -46,6 +47,23 @@ export function HubSpotForm({
     if (isRFQForm) {
       const utm = getStoredUTM()
       trackRFQGenerated(utm)
+
+      try {
+        const contact = await api.contacts.create({
+          first_name: data['firstname'] || data['first_name'] || undefined,
+          last_name: data['lastname'] || data['last_name'] || undefined,
+          email: data['email'] || undefined,
+          phone: data['phone'] || undefined,
+        })
+        await api.leads.create({
+          contact_id: contact.id,
+          source: 'web',
+          stage: 'new',
+          score: 50,
+        })
+      } catch (err) {
+        console.error('Failed to capture CRM lead', err)
+      }
     }
 
     onSubmit?.(data)
