@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic CRM — Launch Thread</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --deep-navy: #0A1628;
+      --navy-dark: #0F1E32;
+      --electric-blue: #3B82F6;
+      --electric-glow: #60A5FA;
+      --white: #FFFFFF;
+      --muted: #94A3B8;
+      --success-green: #10B981;
+      --amber: #F59E0B;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--deep-navy);
+      color: var(--white);
+      width: 1200px;
+      height: 675px;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 1200px;
+      height: 675px;
+      background: linear-gradient(135deg, var(--deep-navy) 0%, var(--navy-dark) 100%);
+      position: relative;
+      display: flex;
+    }
+
+    /* Background pattern */
+    .pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 60% 80%, rgba(16, 185, 129, 0.03) 0%, transparent 40%);
+      pointer-events: none;
+    }
+
+    /* Grid lines */
+    .grid-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* Left side - Before */
+    .side {
+      flex: 1;
+      padding: 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .divider {
+      width: 2px;
+      background: linear-gradient(180deg, transparent, var(--electric-blue), transparent);
+      position: relative;
+    }
+
+    .divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      background: var(--deep-navy);
+      border: 2px solid var(--electric-blue);
+      border-radius: 50%;
+      box-shadow: 0 0 30px var(--electric-blue);
+    }
+
+    /* Right side - After */
+    .right-side {
+      flex: 1;
+      padding: 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .label .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .before .label .dot { background: var(--amber); }
+    .after .label .dot { background: var(--success-green); }
+
+    .before .label { color: var(--muted); }
+    .after .label { color: var(--success-green); }
+
+    .headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .before .headline {
+      color: var(--muted);
+    }
+
+    .after .headline {
+      background: linear-gradient(135deg, var(--white) 0%, var(--electric-glow) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtext {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .after .subtext {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Workflow visualization */
+    .workflow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .workflow-step {
+      padding: 8px 16px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--electric-glow);
+    }
+
+    .workflow-arrow {
+      color: var(--electric-blue);
+      font-size: 18px;
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      gap: 24px;
+      margin-top: 32px;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--electric-glow);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Logo */
+    .logo {
+      position: absolute;
+      top: 32px;
+      left: 40px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 2;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--electric-blue);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg {
+      width: 20px;
+      height: 20px;
+      color: white;
+    }
+
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+
+    /* CTA */
+    .cta {
+      position: absolute;
+      bottom: 32px;
+      right: 40px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--electric-blue);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      z-index: 2;
+    }
+
+    .cta svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Tagline */
+    .tagline {
+      position: absolute;
+      bottom: 32px;
+      left: 40px;
+      font-size: 12px;
+      color: var(--muted);
+      z-index: 2;
+    }
+
+    /* Glow effects */
+    .glow {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+    }
+
+    .glow-1 {
+      background: rgba(59, 130, 246, 0.15);
+      top: -100px;
+      right: 100px;
+    }
+
+    .glow-2 {
+      background: rgba(16, 185, 129, 0.1);
+      bottom: -100px;
+      left: 100px;
+    }
+
+    /* Animated pulse on status */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-indicator {
+      animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="pattern"></div>
+    <div class="grid-lines"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+
+    <!-- Logo -->
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+          <path d="M2 17l10 5 10-5"></path>
+          <path d="M2 12l10 5 10-5"></path>
+        </svg>
+      </div>
+      <span class="logo-text">Agentic CRM</span>
+    </div>
+
+    <!-- Before Side -->
+    <div class="side before">
+      <div class="label">
+        <span class="dot status-indicator"></span>
+        Before — Manual CRM
+      </div>
+      <h2 class="headline">Your CRM works when you do.</h2>
+      <p class="subtext">Data entry by hand. Follow-ups forgotten. Pipeline invisible until it's too late. Your CRM is a database, not a teammate.</p>
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-value">4h+</span>
+          <span class="stat-label">Wasted daily</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">67%</span>
+          <span class="stat-label">Leads lost</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- After Side -->
+    <div class="side right-side after">
+      <div class="label">
+        <span class="dot status-indicator"></span>
+        After — Agentic CRM
+      </div>
+      <h2 class="headline">Your CRM finally works for you.</h2>
+      <p class="subtext">AI agents find leads, update records, and follow up 24/7. You supervise. They execute. Your CRM acts on your behalf.</p>
+      <div class="workflow">
+        <div class="workflow-step">Find</div>
+        <span class="workflow-arrow">→</span>
+        <div class="workflow-step">Qualify</div>
+        <span class="workflow-arrow">→</span>
+        <div class="workflow-step">Close</div>
+        <span class="workflow-arrow">→</span>
+        <div class="workflow-step">Repeat</div>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-value" style="color: #10B981;">+40%</span>
+          <span class="stat-label">More deals</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" style="color: #10B981;">0h</span>
+          <span class="stat-label">Data entry</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tagline -->
+    <div class="tagline">Open source · AI-first · MIT Licensed</div>
+
+    <!-- CTA -->
+    <div class="cta">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+      Follow for launch
+    </div>
+  </div>
+</body>
+</html>

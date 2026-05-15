@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic CRM — Product Hunt 1-Pager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --deep-navy: #0A1628;
+      --navy-dark: #0F1E32;
+      --electric-blue: #3B82F6;
+      --electric-glow: #60A5FA;
+      --white: #FFFFFF;
+      --muted: #94A3B8;
+      --light-gray: #E2E8F0;
+      --success-green: #10B981;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--deep-navy);
+      color: var(--white);
+      width: 1200px;
+      height: 628px;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 1200px;
+      height: 628px;
+      background: linear-gradient(135deg, var(--deep-navy) 0%, var(--navy-dark) 100%);
+      position: relative;
+      display: flex;
+    }
+
+    /* Background effects */
+    .bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+    }
+
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+    }
+
+    .glow-1 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 60%);
+      top: -150px;
+      right: 0;
+    }
+
+    .glow-2 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
+      bottom: -100px;
+      left: 200px;
+    }
+
+    .grid-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    /* Left panel */
+    .left-panel {
+      width: 400px;
+      padding: 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--electric-blue);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 25px rgba(59, 130, 246, 0.4);
+    }
+
+    .logo-icon svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1.1;
+      margin: 32px 0 20px;
+    }
+
+    .headline span {
+      background: linear-gradient(135deg, var(--electric-glow) 0%, var(--electric-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 24px;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--success-green);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Right panel - 3 feature columns */
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 1;
+    }
+
+    .features-header {
+      padding: 40px 48px 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .features {
+      flex: 1;
+      display: flex;
+      gap: 2px;
+      padding: 0 32px 32px;
+    }
+
+    .feature-card {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(59, 130, 246, 0.15);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .feature-icon svg {
+      width: 24px;
+      height: 24px;
+      color: var(--electric-blue);
+    }
+
+    .feature-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .feature-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .feature-highlight {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 12px;
+      color: var(--success-green);
+      font-weight: 500;
+    }
+
+    /* Bottom bar */
+    .bottom-bar {
+      padding: 20px 48px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+
+    .bottom-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .bottom-link {
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .cta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      background: var(--electric-blue);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      text-decoration: none;
+      box-shadow: 0 0 25px rgba(59, 130, 246, 0.4);
+    }
+
+    .cta svg {
+      width: 16px;
+      height: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="bg">
+      <div class="glow glow-1"></div>
+      <div class="glow glow-2"></div>
+      <div class="grid-pattern"></div>
+    </div>
+
+    <!-- Left Panel -->
+    <div class="left-panel">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <span class="logo-text">Agentic CRM</span>
+      </div>
+
+      <div>
+        <h2 class="headline">The CRM that <span>never sleeps.</span></h2>
+        <p class="tagline">AI agents find leads, qualify prospects, and follow up 24/7. You supervise. They execute. Open source, MIT licensed.</p>
+
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-value">+40%</span>
+            <span class="stat-label">More deals</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">0h</span>
+            <span class="stat-label">Data entry</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">24/7</span>
+            <span class="stat-label">AI agents</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 11px; color: var(--muted); margin-bottom: 8px;">LAUNCHING MAY 28</div>
+        <div style="font-size: 13px; color: rgba(255,255,255,0.5);">Open source · AI-first · MIT Licensed</div>
+      </div>
+    </div>
+
+    <!-- Right Panel - Features -->
+    <div class="right-panel">
+      <div class="features-header">What makes it different</div>
+
+      <div class="features">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <h3 class="feature-title">Autonomous Follow-ups</h3>
+          <p class="feature-desc">AI agents automatically re-engage cold leads, schedule follow-ups, and send personalized outreach — no manual intervention needed.</p>
+          <div class="feature-highlight">Never miss a lead</div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <h3 class="feature-title">Automated Data Entry</h3>
+          <p class="feature-desc">Leads from LinkedIn, email, web forms, and phone calls are automatically enriched and logged. No more copy-paste into spreadsheets.</p>
+          <div class="feature-highlight">4+ hours saved/week</div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <h3 class="feature-title">Multi-Channel Inbox</h3>
+          <p class="feature-desc">Email, LinkedIn, and phone — all conversations unified in one place. AI surfaces the right context when you need it.</p>
+          <div class="feature-highlight">Zero context switching</div>
+        </div>
+      </div>
+
+      <div class="bottom-bar">
+        <div class="bottom-links">
+          <a href="#" class="bottom-link">Documentation</a>
+          <a href="#" class="bottom-link">GitHub</a>
+          <a href="#" class="bottom-link">Community</a>
+        </div>
+        <a href="#" class="cta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          Get Early Access
+        </a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

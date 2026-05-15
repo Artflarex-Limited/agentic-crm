@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic CRM — Discord Banner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --deep-navy: #0A1628;
+      --navy-dark: #0F1E32;
+      --electric-blue: #3B82F6;
+      --electric-glow: #60A5FA;
+      --discord-purple: #5865F2;
+      --white: #FFFFFF;
+      --muted: #94A3B8;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--deep-navy);
+      color: var(--white);
+      width: 1200px;
+      height: 333px;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 1200px;
+      height: 333px;
+      background: linear-gradient(135deg, var(--deep-navy) 0%, var(--navy-dark) 100%);
+      position: relative;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* Background effects */
+    .bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+    }
+
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+    }
+
+    .glow-1 {
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(88, 101, 242, 0.2) 0%, transparent 60%);
+      top: -200px;
+      right: 100px;
+    }
+
+    .glow-2 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 60%);
+      bottom: -200px;
+      left: 100px;
+    }
+
+    .grid-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        linear-gradient(rgba(88, 101, 242, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(88, 101, 242, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* Diagonal accent */
+    .diagonal-accent {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(135deg, transparent 0%, rgba(88, 101, 242, 0.08) 100%);
+      clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+    }
+
+    /* Content */
+    .content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 60px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Left side - Logo and headline */
+    .left {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-icon {
+      width: 64px;
+      height: 64px;
+      background: var(--electric-blue);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 40px rgba(59, 130, 246, 0.4);
+    }
+
+    .logo-icon svg {
+      width: 32px;
+      height: 32px;
+      color: white;
+    }
+
+    .logo-text-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-tagline {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* Divider */
+    .divider {
+      width: 1px;
+      height: 80px;
+      background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      margin: 0 40px;
+    }
+
+    /* Headline text */
+    .headline-text {
+      max-width: 400px;
+    }
+
+    .headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .headline span {
+      background: linear-gradient(135deg, var(--electric-glow) 0%, var(--electric-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtext {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* Right side - CTA */
+    .right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .discord-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 28px;
+      background: var(--discord-purple);
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(88, 101, 242, 0.4);
+    }
+
+    .discord-badge svg {
+      width: 28px;
+      height: 28px;
+      color: white;
+    }
+
+    .discord-badge-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .discord-badge-main {
+      font-size: 16px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .discord-badge-sub {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Floating elements */
+    .float-element {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: var(--electric-blue);
+      border-radius: 50%;
+      opacity: 0.5;
+    }
+
+    .float-1 { top: 60px; left: 200px; animation: float 4s ease-in-out infinite; }
+    .float-2 { top: 100px; right: 300px; animation: float 5s ease-in-out infinite 1s; }
+    .float-3 { bottom: 80px; left: 400px; animation: float 6s ease-in-out infinite 2s; }
+    .float-4 { top: 40px; right: 500px; animation: float 4.5s ease-in-out infinite 0.5s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    /* Decorative rings */
+    .ring {
+      position: absolute;
+      border: 1px solid rgba(88, 101, 242, 0.15);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .ring-1 {
+      width: 300px;
+      height: 300px;
+      bottom: -150px;
+      right: 100px;
+    }
+
+    .ring-2 {
+      width: 200px;
+      height: 200px;
+      bottom: -100px;
+      right: 150px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="bg">
+      <div class="glow glow-1"></div>
+      <div class="glow glow-2"></div>
+      <div class="grid-pattern"></div>
+      <div class="diagonal-accent"></div>
+    </div>
+
+    <!-- Floating elements -->
+    <div class="float-element float-1"></div>
+    <div class="float-element float-2"></div>
+    <div class="float-element float-3"></div>
+    <div class="float-element float-4"></div>
+
+    <!-- Decorative rings -->
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Left side -->
+      <div class="left">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
+          <div class="logo-text-group">
+            <span class="logo-text">Agentic CRM</span>
+            <span class="logo-tagline">Open source · AI-first</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="headline-text">
+          <h2 class="headline">Join the future of<br><span>autonomous CRM</span></h2>
+          <p class="subtext">Connect with developers and early adopters</p>
+        </div>
+      </div>
+
+      <!-- Right side -->
+      <div class="right">
+        <div class="discord-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+          <div class="discord-badge-text">
+            <span class="discord-badge-main">Join Discord</span>
+            <span class="discord-badge-sub">500+ members</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

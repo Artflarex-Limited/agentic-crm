@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic CRM — LinkedIn Announcement</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --deep-navy: #0A1628;
+      --navy-dark: #0F1E32;
+      --electric-blue: #3B82F6;
+      --electric-glow: #60A5FA;
+      --white: #FFFFFF;
+      --muted: #94A3B8;
+      --light-gray: #E2E8F0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--deep-navy);
+      color: var(--white);
+      width: 1200px;
+      height: 627px;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 1200px;
+      height: 627px;
+      background: linear-gradient(180deg, var(--deep-navy) 0%, var(--navy-dark) 100%);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Background effects */
+    .bg-effects {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .gradient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+    }
+
+    .orb-1 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+      top: -200px;
+      right: -100px;
+    }
+
+    .orb-2 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+      bottom: -100px;
+      left: 100px;
+    }
+
+    .grid-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* Header */
+    .header {
+      padding: 40px 60px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--electric-blue);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+    }
+
+    .logo-icon svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--electric-glow);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--electric-blue);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Main content */
+    .content {
+      flex: 1;
+      padding: 0 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 72px;
+      font-weight: 700;
+      line-height: 1.05;
+      margin-bottom: 24px;
+      max-width: 900px;
+    }
+
+    .headline-line1 {
+      display: block;
+    }
+
+    .headline-line2 {
+      display: block;
+      background: linear-gradient(135deg, var(--white) 0%, var(--electric-glow) 50%, var(--electric-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .headline-line3 {
+      display: block;
+      color: var(--muted);
+      font-size: 56px;
+    }
+
+    /* Features row */
+    .features {
+      display: flex;
+      gap: 40px;
+      margin-top: 40px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .feature-icon {
+      width: 36px;
+      height: 36px;
+      background: rgba(59, 130, 246, 0.15);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .feature-icon svg {
+      width: 18px;
+      height: 18px;
+      color: var(--electric-blue);
+    }
+
+    .feature-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Footer */
+    .footer {
+      padding: 30px 60px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+
+    .sub-copy {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 600px;
+      line-height: 1.5;
+    }
+
+    .cta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      background: var(--electric-blue);
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+    }
+
+    .cta svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Decorative elements */
+    .deco-ring {
+      position: absolute;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .ring-1 {
+      width: 600px;
+      height: 600px;
+      bottom: -300px;
+      right: -200px;
+    }
+
+    .ring-2 {
+      width: 400px;
+      height: 400px;
+      bottom: -200px;
+      right: -100px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="bg-effects">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="grid-pattern"></div>
+      <div class="deco-ring ring-1"></div>
+      <div class="deco-ring ring-2"></div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <span class="logo-text">Agentic CRM</span>
+      </div>
+      <div class="badge">
+        <span class="badge-dot"></span>
+        Launching May 28
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <h1 class="headline">
+        <span class="headline-line1">Meet the CRM</span>
+        <span class="headline-line2">that never sleeps.</span>
+        <span class="headline-line3">Autonomous. AI-first.</span>
+      </h1>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <span class="feature-text">Autonomous follow-ups</span>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <span class="feature-text">Automated data entry</span>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <span class="feature-text">AI-powered insights</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p class="sub-copy">Open source · AI agents work 24/7 · Human approval holds · MIT Licensed</p>
+      <div class="cta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+        Get Early Access
+      </div>
+    </div>
+  </div>
+</body>
+</html>

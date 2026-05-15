@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic CRM — Blog Header</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --deep-navy: #0A1628;
+      --navy-dark: #0F1E32;
+      --electric-blue: #3B82F6;
+      --electric-glow: #60A5FA;
+      --white: #FFFFFF;
+      --muted: #94A3B8;
+      --success-green: #10B981;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--deep-navy);
+      color: var(--white);
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 1200px;
+      height: 630px;
+      background: linear-gradient(145deg, var(--deep-navy) 0%, var(--navy-dark) 100%);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Background effects */
+    .bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+    }
+
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+    }
+
+    .glow-1 {
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 60%);
+      top: -250px;
+      right: -100px;
+    }
+
+    .glow-2 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
+      bottom: -150px;
+      left: 200px;
+    }
+
+    .grid-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    /* Abstract workflow visualization */
+    .workflow-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .workflow-line {
+      position: absolute;
+      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+      height: 1px;
+    }
+
+    .line-1 { top: 20%; left: 10%; width: 30%; transform: rotate(-5deg); }
+    .line-2 { top: 40%; left: 60%; width: 25%; transform: rotate(8deg); }
+    .line-3 { top: 65%; left: 20%; width: 35%; transform: rotate(-3deg); }
+    .line-4 { top: 80%; left: 70%; width: 20%; transform: rotate(5deg); }
+
+    /* Nodes */
+    .node {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: var(--electric-blue);
+      border-radius: 50%;
+      opacity: 0.4;
+      animation: pulse-node 3s infinite;
+    }
+
+    .node-1 { top: 18%; left: 38%; animation-delay: 0s; }
+    .node-2 { top: 38%; left: 15%; animation-delay: 0.5s; }
+    .node-3 { top: 42%; left: 75%; animation-delay: 1s; }
+    .node-4 { top: 63%; left: 52%; animation-delay: 1.5s; }
+    .node-5 { top: 78%; left: 28%; animation-delay: 2s; }
+    .node-6 { top: 82%; left: 85%; animation-delay: 2.5s; }
+
+    @keyframes pulse-node {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.5); }
+    }
+
+    /* Header content */
+    .header {
+      padding: 48px 60px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--electric-blue);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 25px rgba(59, 130, 246, 0.4);
+    }
+
+    .logo-icon svg {
+      width: 22px;
+      height: 22px;
+      color: white;
+    }
+
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .blog-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 100px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Main content */
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 60px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--electric-blue);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .eyebrow::before {
+      content: '';
+      width: 30px;
+      height: 2px;
+      background: var(--electric-blue);
+    }
+
+    .headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 64px;
+      font-weight: 700;
+      line-height: 1.08;
+      margin-bottom: 24px;
+      max-width: 900px;
+    }
+
+    .headline-line {
+      display: block;
+    }
+
+    .headline-line-1 {
+      color: var(--white);
+    }
+
+    .headline-line-2 {
+      background: linear-gradient(135deg, var(--white) 0%, var(--electric-glow) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .headline-line-3 {
+      color: var(--muted);
+      font-size: 48px;
+    }
+
+    .description {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 600px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    /* Feature pills */
+    .features {
+      display: flex;
+      gap: 16px;
+    }
+
+    .feature-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 100px;
+    }
+
+    .feature-pill-icon {
+      width: 18px;
+      height: 18px;
+      color: var(--electric-blue);
+    }
+
+    .feature-pill-text {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Footer */
+    .footer {
+      padding: 30px 60px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+
+    .author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .author-avatar {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--electric-blue), var(--success-green));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .author-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .author-name {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .author-date {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .reading-time {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .reading-time svg {
+      width: 16px;
+      height: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="bg">
+      <div class="glow glow-1"></div>
+      <div class="glow glow-2"></div>
+      <div class="grid-pattern"></div>
+    </div>
+
+    <!-- Workflow background elements -->
+    <div class="workflow-bg">
+      <div class="workflow-line line-1"></div>
+      <div class="workflow-line line-2"></div>
+      <div class="workflow-line line-3"></div>
+      <div class="workflow-line line-4"></div>
+      <div class="node node-1"></div>
+      <div class="node node-2"></div>
+      <div class="node node-3"></div>
+      <div class="node node-4"></div>
+      <div class="node node-5"></div>
+      <div class="node node-6"></div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <span class="logo-text">Agentic CRM</span>
+      </div>
+      <div class="blog-badge">Blog</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <div class="eyebrow">Product Update</div>
+
+      <h1 class="headline">
+        <span class="headline-line headline-line-1">How Agentic CRM</span>
+        <span class="headline-line headline-line-2">transforms your sales workflow</span>
+        <span class="headline-line headline-line-3">from manual to autonomous.</span>
+      </h1>
+
+      <p class="description">
+        AI agents find leads, qualify prospects, and follow up 24/7. This is what the future of CRM looks like.
+      </p>
+
+      <div class="features">
+        <div class="feature-pill">
+          <svg class="feature-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span class="feature-pill-text">Autonomous</span>
+        </div>
+        <div class="feature-pill">
+          <svg class="feature-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          <span class="feature-pill-text">Automated</span>
+        </div>
+        <div class="feature-pill">
+          <svg class="feature-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+          <span class="feature-pill-text">AI-Powered</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="author">
+        <div class="author-avatar">AC</div>
+        <div class="author-info">
+          <span class="author-name">Agentic CRM Team</span>
+          <span class="author-date">May 15, 2026</span>
+        </div>
+      </div>
+      <div class="reading-time">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        5 min read
+      </div>
+    </div>
+  </div>
+</body>
+</html>

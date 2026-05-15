@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic CRM — Product Hunt Thumbnail</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --deep-navy: #0A1628;
+      --navy-dark: #0F1E32;
+      --electric-blue: #3B82F6;
+      --electric-glow: #60A5FA;
+      --white: #FFFFFF;
+      --muted: #94A3B8;
+      --ph-blue: #FF5700;
+      --success-green: #10B981;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--deep-navy);
+      color: var(--white);
+      width: 1240px;
+      height: 900px;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 1240px;
+      height: 900px;
+      background: linear-gradient(145deg, var(--deep-navy) 0%, var(--navy-dark) 100%);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Background */
+    .bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+    }
+
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+    }
+
+    .glow-1 {
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 60%);
+      top: -300px;
+      left: 200px;
+    }
+
+    .glow-2 {
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 60%);
+      bottom: -200px;
+      right: 100px;
+    }
+
+    .grid-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    /* Content */
+    .content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 60px;
+    }
+
+    /* Product Hunt badge */
+    .ph-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: var(--ph-blue);
+      border-radius: 8px;
+      margin-bottom: 40px;
+    }
+
+    .ph-badge svg {
+      width: 20px;
+      height: 20px;
+      color: white;
+    }
+
+    .ph-badge-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      letter-spacing: 0.5px;
+    }
+
+    /* Logo */
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .logo-icon {
+      width: 72px;
+      height: 72px;
+      background: var(--electric-blue);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 50px rgba(59, 130, 246, 0.5);
+    }
+
+    .logo-icon svg {
+      width: 40px;
+      height: 40px;
+      color: white;
+    }
+
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+
+    /* Headline */
+    .headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 56px;
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 24px;
+      max-width: 800px;
+    }
+
+    .highlight {
+      background: linear-gradient(135deg, var(--electric-glow) 0%, var(--electric-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Tagline */
+    .tagline {
+      font-size: 22px;
+      color: var(--muted);
+      margin-bottom: 48px;
+      max-width: 600px;
+    }
+
+    /* Features */
+    .features {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-bottom: 48px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 100px;
+    }
+
+    .feature-icon {
+      width: 24px;
+      height: 24px;
+      background: var(--electric-blue);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .feature-icon svg {
+      width: 14px;
+      height: 14px;
+      color: white;
+    }
+
+    .feature-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* CTA */
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 36px;
+      background: var(--electric-blue);
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      color: white;
+      box-shadow: 0 0 40px rgba(59, 130, 246, 0.5);
+    }
+
+    .cta svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    /* Bottom text */
+    .bottom-text {
+      position: absolute;
+      bottom: 40px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 14px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="bg">
+      <div class="glow glow-1"></div>
+      <div class="glow glow-2"></div>
+      <div class="grid-pattern"></div>
+    </div>
+
+    <div class="content">
+      <!-- PH Badge -->
+      <div class="ph-badge">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12.225 12.165c-1.141.016-2.296.244-3.267.676-1.207-.817-2.752-.817-3.96 0-1.023-.458-2.182-.695-3.339-.69V17.8c.017 4.523 3.342 8.2 7.453 8.2s7.436-3.677 7.453-8.2v-6.354c-1.167.005-2.316.232-3.34.69zm-.384-3.076c.72.012 1.443.167 2.106.482-.32.304-.528.712-.594 1.165a8.095 8.095 0 0 0-.814-.18 8.17 8.17 0 0 0-1.17.18c-.06-.44-.253-.837-.566-1.138.65-.32 1.344-.486 2.038-.509zm-6.06 1.826c.28.313.47.71.535 1.162-.34.097-.68.2-1.016.305a8.15 8.15 0 0 0-.88.324c-.054-.436-.23-.826-.53-1.123.63-.24 1.26-.426 1.89-.668zm-3.134 1.94a2.532 2.532 0 0 1 .454-.267c.32.59.78 1.093 1.322 1.48-.6.34-1.223.64-1.87.887-.34-.658-.4-1.41-.17-2.08.08-.05.17-.092.264-.133v.113zm.87 2.594c.48.426 1.08.722 1.714.897-.5.27-1.01.51-1.54.723-.42-.59-.56-1.31-.36-1.99.06-.02.12-.03.19-.04v.41zm3.9.66c.28.25.64.42 1.02.5-.36.22-.73.42-1.1.61-.41-.43-.71-.97-.85-1.58.11.05.23.09.35.13.23.11.46.2.58.34zm-.09-3.24c.54-.1 1.08-.17 1.63-.18.38.54.64 1.16.78 1.81-.66-.22-1.33-.4-2-.52-.17-.35-.27-.73-.28-1.12h-.13zm4.36-.5c.02.31.05.61.11.91-.49.05-.98.1-1.47.2.06-.66.31-1.28.75-1.78.2.21.43.42.61.67zm1.89-.39c.17.55.21 1.15.12 1.73-.59-.13-1.17-.2-1.76-.26.12-.58.4-1.1.86-1.5.25.34.55.67.78 1.03zm1.84.17c-.02.55-.17 1.08-.44 1.54-.63-.24-1.25-.42-1.9-.53.17-.5.53-.93 1.03-1.22.43.08.87.13 1.31.21zm-1.44 2.43c-.23.17-.5.3-.78.39-.59-.54-.98-1.28-1.08-2.09.63.25 1.26.57 1.87.95-.01.25-.01.5-.01.75zm3.24-.1c.01.33-.01.66-.07.98-.65-.32-1.31-.57-2-.76.12-.5.41-.94.85-1.24.41.33.82.68 1.22 1.02zm.8.4c-.3.42-.7.77-1.17 1-.52-.49-.88-1.14-.98-1.88.7.26 1.41.57 2.15.88zm-2.16 2.16c-.51.3-1.08.47-1.68.52-.04-.61.12-1.22.46-1.73.51.36 1.04.69 1.56 1.02-.11.07-.22.13-.34.19zm-1.38.36c-.45.08-.91.08-1.36-.01-.08-.5.01-1.01.27-1.44.44.41.88.82 1.32 1.24-.07.07-.14.14-.23.21z"/>
+        </svg>
+        <span class="ph-badge-text">PRODUCT OF THE DAY</span>
+      </div>
+
+      <!-- Logo -->
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <span class="logo-text">Agentic CRM</span>
+      </div>
+
+      <!-- Headline -->
+      <h1 class="headline">
+        The CRM that works<br>
+        <span class="highlight">while you sleep.</span>
+      </h1>
+
+      <!-- Tagline -->
+      <p class="tagline">AI agents find leads, qualify prospects, and follow up 24/7.<br>You supervise. They execute.</p>
+
+      <!-- Features -->
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <span class="feature-text">Autonomous Follow-ups</span>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <span class="feature-text">Automated Data Entry</span>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <span class="feature-text">AI-Powered Insights</span>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+        Hunt it now
+      </div>
+    </div>
+
+    <div class="bottom-text">Open source · AI agents · Human approval holds · MIT Licensed</div>
+  </div>
+</body>
+</html>
