@@ -23,6 +23,26 @@ spec:
           env:
             - name: NEXT_PUBLIC_API_URL
               value: "http://agentic-crm-backend:8000"
+            - name: NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: agentic-crm-config
+                  key: NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID
+            - name: NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_RFQ
+              valueFrom:
+                configMapKeyRef:
+                  name: agentic-crm-config
+                  key: NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_RFQ
+            - name: NEXT_PUBLIC_GA4_MEASUREMENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: agentic-crm-config
+                  key: NEXT_PUBLIC_GA4_MEASUREMENT_ID
+            - name: NEXT_PUBLIC_HUBSPOT_PORTAL_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: agentic-crm-config
+                  key: NEXT_PUBLIC_HUBSPOT_PORTAL_ID
           resources:
             limits:
               cpu: "1"

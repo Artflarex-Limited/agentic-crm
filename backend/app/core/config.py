@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     ga4_measurement_id: str = ""
     ga4_api_secret: str = ""
 
+    # Google Ads (conversion tracking)
+    google_ads_conversion_id: str = ""
+    google_ads_conversion_label_rfq: str = ""
+
     # Agent settings
     outreach_requires_approval: bool = True
 

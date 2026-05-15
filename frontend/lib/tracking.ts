@@ -11,6 +11,8 @@ declare global {
     ConversationsWidget?: {
       initialize: () => void
     }
+    google_track_conversion?: (conversionId: string, conversionLabel?: string) => void
+    fbq?: (...args: unknown[]) => void
   }
 }
 
@@ -90,6 +92,32 @@ export function initGA4(measurementId?: string): void {
   })
 }
 
+export function initMetaPixel(pixelId?: string): void {
+  if (typeof window === 'undefined' || !pixelId) return
+
+  window.fbq = window.fbq || function (...args: unknown[]) {
+    const ns = 'fbq'
+    const c = window[ns] as Record<string, unknown> | undefined
+    const ctx = window as unknown as Record<string, unknown>
+    if (typeof c === 'function') {
+      c.call(ctx, ...args)
+    }
+  }
+
+  const script = document.createElement('script')
+  script.async = true
+  script.src = 'https://connect.facebook.net/en_US/fbevents.js'
+  document.head.appendChild(script)
+
+  window.fbq('init', pixelId)
+  window.fbq('track', 'PageView')
+}
+
+export function trackMetaPageView(): void {
+  if (typeof window === 'undefined' || !window.fbq) return
+  window.fbq('track', 'PageView')
+}
+
 export function trackPageView(path: string, title?: string): void {
   if (typeof window === 'undefined' || !window.gtag) return
   window.gtag('event', 'page_view', {
@@ -146,6 +174,25 @@ export function trackRFQGenerated(utm?: UTMParams): void {
     event_category: 'engagement',
     ...utm,
   })
+
+  if (typeof window !== 'undefined' && window.gtag) {
+    const conversionId = process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID
+    const conversionLabel = process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_RFQ
+    if (conversionId && conversionLabel) {
+      window.gtag('event', 'conversion', {
+        send_to: `${conversionId}/${conversionLabel}`,
+      })
+      if (window.gtag_report_conversion) {
+        window.gtag_report_conversion()
+      }
+    }
+  }
+}
+
+export function trackGoogleAdsConversion(conversionId: string, conversionLabel: string): void {
+  if (typeof window !== 'undefined' && window.gtag_report_conversion) {
+    window.gtag_report_conversion()
+  }
 }
 
 export function trackSearchAbandon(query: string, utm?: UTMParams): void {

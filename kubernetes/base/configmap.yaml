@@ -9,3 +9,7 @@ data:
   REDIS_URL: "redis://redis:6379/0"
   LOG_LEVEL: "info"
   ENVIRONMENT: "production"
+  NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID: "your-google-ads-conversion-id"
+  NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_RFQ: "your-rfq-conversion-label"
+  NEXT_PUBLIC_GA4_MEASUREMENT_ID: "G-XXXXXXXXXX"
+  NEXT_PUBLIC_HUBSPOT_PORTAL_ID: "XXXXXXXX"
