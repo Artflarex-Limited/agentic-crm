@@ -154,6 +154,53 @@ export interface MarketIntelligenceDashboard {
   period_days: number
 }
 
+export interface PricingTrend {
+  date: string
+  avg_price: number
+  min_price: number
+  max_price: number
+  volume: number
+  moving_avg_7d: number | null
+  moving_avg_30d: number | null
+}
+
+export interface DemandForecast {
+  date: string
+  predicted_demand: number
+  confidence_lower: number
+  confidence_upper: number
+  trend: 'increasing' | 'decreasing' | 'stable'
+}
+
+export interface CompetitorAggregate {
+  competitor_name: string
+  avg_price: number
+  price_range_min: number
+  price_range_max: number
+  market_share_estimate: number
+  last_updated: string
+}
+
+export interface PriceAlert {
+  alert_id: string
+  alert_type: 'price_spike' | 'price_drop' | 'demand_anomaly' | 'competitor_movement'
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  message: string
+  affected_category: string | null
+  detected_value: number
+  threshold_value: number
+  detected_at: string
+}
+
+export interface MarketIntelligenceResponse {
+  pricing_trends: PricingTrend[]
+  demand_forecast: DemandForecast[]
+  competitor_aggregates: CompetitorAggregate[]
+  active_alerts: PriceAlert[]
+  last_refreshed: string
+  cache_ttl_seconds: number
+}
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
@@ -231,5 +278,15 @@ export const api = {
     get: (id: number) => fetchApi<Sequence>(`/api/sequences/${id}`),
     create: (data: Partial<Sequence>) => fetchApi<Sequence>('/api/sequences', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: Partial<Sequence>) => fetchApi<Sequence>(`/api/sequences/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  market: {
+    intelligence: (params?: { category?: string; country?: string; include_forecast?: boolean }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.category) searchParams.set('category', params.category)
+      if (params?.country) searchParams.set('country', params.country)
+      if (params?.include_forecast !== undefined) searchParams.set('include_forecast', String(params.include_forecast))
+      const query = searchParams.toString()
+      return fetchApi<MarketIntelligenceResponse>(`/api/market/intelligence${query ? `?${query}` : ''}`)
+    },
   },
 }

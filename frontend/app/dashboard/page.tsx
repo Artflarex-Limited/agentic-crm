@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { api, type Deal, type DealStage, type Activity, type Agent, type PipelineItem, type MarketIntelligenceDashboard } from '@/lib/api'
+import { api, type Deal, type DealStage, type Activity, type Agent, type PipelineItem, type MarketIntelligenceDashboard, type MarketIntelligenceResponse } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PipelineChart, StatCard, ConversionFunnel, VelocityMetric, PipelineTrend, WinLossRatio, AgentPerformancePanel, CampaignEffectiveness } from '@/components/analytics'
-import { DollarSign, Users, Target, TrendingUp, Activity as ActivityIcon, Bot, ArrowUpRight, ArrowDownRight, BarChart3, PieChart, TrendingDown } from 'lucide-react'
+import { DollarSign, Users, Target, TrendingUp, Activity as ActivityIcon, Bot, ArrowUpRight, ArrowDownRight, BarChart3, PieChart, TrendingDown, AlertTriangle, LineChart } from 'lucide-react'
 
 const STAGES: { key: DealStage; label: string; color: string; borderColor: string }[] = [
   { key: 'lead', label: 'Lead', color: 'text-blue-400 bg-blue-400/10', borderColor: 'border-blue-400/30' },
@@ -160,22 +160,25 @@ export default function DashboardPage() {
     recent_activities: [],
   })
   const [marketIntelligence, setMarketIntelligence] = useState<MarketIntelligenceDashboard | null>(null)
+  const [realTimeMarketData, setRealTimeMarketData] = useState<MarketIntelligenceResponse | null>(null)
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       try {
-        const [pipelineResponse, statsData, agentsData, marketData] = await Promise.all([
+        const [pipelineResponse, statsData, agentsData, marketData, realTimeData] = await Promise.all([
           api.dashboard.pipeline(),
           api.dashboard.stats(),
           api.agents.list(),
           api.dashboard.marketIntelligence(30),
+          api.market.intelligence(),
         ])
         setPipeline((pipelineResponse as PipelineData).items)
         setStats(statsData)
         setAgents(agentsData)
         setMarketIntelligence(marketData)
+        setRealTimeMarketData(realTimeData)
       } catch (e) {
         console.error('Failed to load dashboard', e)
       } finally {
@@ -320,14 +323,122 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <div className="grid gap-6 md:grid-cols-2">
-                <RevenueForecastCard forecast={marketIntelligence.revenue_forecast} />
-                <SourceEffectivenessCard sources={marketIntelligence.source_effectiveness} />
-              </div>
-            </>
-          )}
+              {realTimeMarketData && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <LineChart className="h-5 w-5 text-primary" />
+                        Real-time Market Intelligence
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="p-4 rounded-lg bg-secondary/50">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-muted-foreground">Pricing Trend (7D MA)</span>
+                            {realTimeMarketData.pricing_trends.length > 0 && (
+                              <span className={`text-sm font-medium ${(realTimeMarketData.pricing_trends[realTimeMarketData.pricing_trends.length - 1]?.moving_avg_7d || 0) > (realTimeMarketData.pricing_trends[realTimeMarketData.pricing_trends.length - 1]?.moving_avg_30d || 0) ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {(realTimeMarketData.pricing_trends[realTimeMarketData.pricing_trends.length - 1]?.moving_avg_7d || 0) > (realTimeMarketData.pricing_trends[realTimeMarketData.pricing_trends.length - 1]?.moving_avg_30d || 0) ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-2xl font-bold">
+                            ${(realTimeMarketData.pricing_trends[realTimeMarketData.pricing_trends.length - 1]?.moving_avg_7d || 0).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">30D: ${(realTimeMarketData.pricing_trends[realTimeMarketData.pricing_trends.length - 1]?.moving_avg_30d || 0).toLocaleString()}</p>
+                        </div>
 
-          <Card>
+                        <div className="p-4 rounded-lg bg-secondary/50">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-muted-foreground">Demand Forecast</span>
+                            {realTimeMarketData.demand_forecast.length > 0 && (
+                              <span className={`text-sm font-medium ${realTimeMarketData.demand_forecast[0]?.trend === 'increasing' ? 'text-emerald-400' : realTimeMarketData.demand_forecast[0]?.trend === 'decreasing' ? 'text-red-400' : 'text-yellow-400'}`}>
+                                {realTimeMarketData.demand_forecast[0]?.trend}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-2xl font-bold">
+                            {(realTimeMarketData.demand_forecast[0]?.predicted_demand || 0).toFixed(1)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Conf: {(realTimeMarketData.demand_forecast[0]?.confidence_lower || 0).toFixed(1)} - {(realTimeMarketData.demand_forecast[0]?.confidence_upper || 0).toFixed(1)}
+                          </p>
+                        </div>
+
+                        <div className="p-4 rounded-lg bg-secondary/50">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-muted-foreground">Active Alerts</span>
+                            <Badge variant="destructive" className="text-xs">
+                              {realTimeMarketData.active_alerts.length}
+                            </Badge>
+                          </div>
+                          {realTimeMarketData.active_alerts.length > 0 ? (
+                            <div className="space-y-1">
+                              {realTimeMarketData.active_alerts.slice(0, 2).map((alert, idx) => (
+                                <p key={idx} className="text-xs truncate">{alert.message}</p>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">No active alerts</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {realTimeMarketData.pricing_trends.length > 0 && (
+                        <div className="mt-4 pt-4 border-t">
+                          <p className="text-xs text-muted-foreground mb-2">Recent Pricing Trend</p>
+                          <div className="flex items-end gap-1 h-16">
+                            {realTimeMarketData.pricing_trends.slice(-14).map((trend, idx) => {
+                              const maxPrice = Math.max(...realTimeMarketData.pricing_trends.slice(-14).map(t => t.avg_price))
+                              const height = maxPrice > 0 ? (trend.avg_price / maxPrice) * 100 : 0
+                              return (
+                                <div
+                                  key={idx}
+                                  className="flex-1 bg-primary/30 hover:bg-primary/50 transition-colors rounded-t"
+                                  style={{ height: `${Math.max(10, height)}%` }}
+                                  title={`${trend.date}: $${trend.avg_price.toLocaleString()}`}
+                                />
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <RevenueForecastCard forecast={marketIntelligence.revenue_forecast} />
+                    <SourceEffectivenessCard sources={marketIntelligence.source_effectiveness} />
+                  </div>
+
+                  {realTimeMarketData.competitor_aggregates.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <PieChart className="h-5 w-5 text-primary" />
+                          Competitor Analysis
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                          {realTimeMarketData.competitor_aggregates.slice(0, 6).map((comp, idx) => (
+                            <div key={idx} className="p-3 rounded-lg bg-secondary/50">
+                              <p className="text-sm font-medium truncate">{comp.competitor_name}</p>
+                              <p className="text-lg font-bold text-emerald-400">${comp.avg_price.toLocaleString()}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Range: ${comp.price_range_min.toLocaleString()} - ${comp.price_range_max.toLocaleString()}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+
+              <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
