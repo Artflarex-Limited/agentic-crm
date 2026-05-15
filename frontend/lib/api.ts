@@ -112,6 +112,48 @@ export interface PipelineItem {
   expected_close_date?: string
 }
 
+export interface ConversionMetrics {
+  lead_to_contacted_rate: number
+  contacted_to_qualified_rate: number
+  qualified_to_proposal_rate: number
+  proposal_to_negotiation_rate: number
+  negotiation_to_won_rate: number
+  overall_conversion_rate: number
+}
+
+export interface RevenueForecast {
+  projected_revenue_30_days: number
+  projected_revenue_60_days: number
+  projected_revenue_90_days: number
+  weighted_pipeline_value: number
+  forecast_confidence: number
+}
+
+export interface SourceEffectiveness {
+  source: string
+  total_leads: number
+  conversion_rate: number
+  avg_deal_value: number
+  revenue: number
+}
+
+export interface AgentPerformanceMetric {
+  agent_id: number
+  agent_name: string
+  actions_today: number
+  actions_this_week: number
+  success_rate: number
+  avg_response_time_minutes: number
+}
+
+export interface MarketIntelligenceDashboard {
+  conversion_metrics: ConversionMetrics
+  revenue_forecast: RevenueForecast
+  source_effectiveness: SourceEffectiveness[]
+  agent_performance: AgentPerformanceMetric[]
+  period_days: number
+}
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
@@ -128,6 +170,7 @@ export const api = {
   dashboard: {
     stats: () => fetchApi<{ total_leads: number; total_contacts: number; total_deals: number; open_deals_value: number; leads_by_stage: Record<string, number>; deals_by_stage: Record<string, number>; recent_activities: Activity[] }>('/api/dashboard/stats'),
     pipeline: () => fetchApi<{ items: PipelineItem[] }>('/api/dashboard/pipeline'),
+    marketIntelligence: (period_days?: number) => fetchApi<MarketIntelligenceDashboard>(`/api/dashboard/market-intelligence${period_days ? `?period_days=${period_days}` : ''}`),
   },
   leads: {
     list: (params?: { stage?: LeadStage; source?: LeadSource; search?: string }) => {

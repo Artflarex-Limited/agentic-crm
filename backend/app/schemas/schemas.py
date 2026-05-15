@@ -207,3 +207,46 @@ class PipelineItem(BaseModel):
     value: float
     stage: DealStage
     expected_close_date: datetime | None
+
+
+# ─── Market Intelligence ──────────────────────────────────────────────────────
+class ConversionMetrics(BaseModel):
+    lead_to_contacted_rate: float
+    contacted_to_qualified_rate: float
+    qualified_to_proposal_rate: float
+    proposal_to_negotiation_rate: float
+    negotiation_to_won_rate: float
+    overall_conversion_rate: float
+
+
+class RevenueForecast(BaseModel):
+    projected_revenue_30_days: float
+    projected_revenue_60_days: float
+    projected_revenue_90_days: float
+    weighted_pipeline_value: float
+    forecast_confidence: float
+
+
+class SourceEffectiveness(BaseModel):
+    source: str
+    total_leads: int
+    conversion_rate: float
+    avg_deal_value: float
+    revenue: float
+
+
+class AgentPerformanceMetric(BaseModel):
+    agent_id: int
+    agent_name: str
+    actions_today: int
+    actions_this_week: int
+    success_rate: float
+    avg_response_time_minutes: float
+
+
+class MarketIntelligenceDashboard(BaseModel):
+    conversion_metrics: ConversionMetrics
+    revenue_forecast: RevenueForecast
+    source_effectiveness: list[SourceEffectiveness]
+    agent_performance: list[AgentPerformanceMetric]
+    period_days: int

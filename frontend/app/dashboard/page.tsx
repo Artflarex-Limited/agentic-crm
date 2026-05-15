@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { api, type Deal, type DealStage, type Activity, type Agent, type PipelineItem } from '@/lib/api'
+import { api, type Deal, type DealStage, type Activity, type Agent, type PipelineItem, type MarketIntelligenceDashboard } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PipelineChart, StatCard, ConversionFunnel, VelocityMetric, PipelineTrend, WinLossRatio, AgentPerformancePanel, CampaignEffectiveness } from '@/components/analytics'
-import { DollarSign, Users, Target, TrendingUp, Activity as ActivityIcon, Bot, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { DollarSign, Users, Target, TrendingUp, Activity as ActivityIcon, Bot, ArrowUpRight, ArrowDownRight, BarChart3, PieChart, TrendingDown } from 'lucide-react'
 
 const STAGES: { key: DealStage; label: string; color: string; borderColor: string }[] = [
   { key: 'lead', label: 'Lead', color: 'text-blue-400 bg-blue-400/10', borderColor: 'border-blue-400/30' },
@@ -37,6 +37,117 @@ interface PipelineData {
   items: PipelineItem[]
 }
 
+function ConversionFunnelCard({ metrics }: { metrics: { lead_to_contacted_rate: number; contacted_to_qualified_rate: number; qualified_to_proposal_rate: number; proposal_to_negotiation_rate: number; negotiation_to_won_rate: number } }) {
+  const stages = [
+    { label: 'Lead → Contacted', rate: metrics.lead_to_contacted_rate },
+    { label: 'Contacted → Qualified', rate: metrics.contacted_to_qualified_rate },
+    { label: 'Qualified → Proposal', rate: metrics.qualified_to_proposal_rate },
+    { label: 'Proposal → Negotiation', rate: metrics.proposal_to_negotiation_rate },
+    { label: 'Negotiation → Won', rate: metrics.negotiation_to_won_rate },
+  ]
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          Conversion Funnel
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {stages.map((stage, idx) => (
+            <div key={idx} className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{stage.label}</span>
+                <span className="font-medium">{stage.rate}%</span>
+              </div>
+              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, stage.rate)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function RevenueForecastCard({ forecast }: { forecast: { projected_revenue_30_days: number; projected_revenue_60_days: number; projected_revenue_90_days: number; weighted_pipeline_value: number; forecast_confidence: number } }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          Revenue Forecast
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">30-Day Projection</span>
+            <span className="text-lg font-semibold text-emerald-400">${forecast.projected_revenue_30_days.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">60-Day Projection</span>
+            <span className="text-lg font-semibold text-emerald-400">${forecast.projected_revenue_60_days.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">90-Day Projection</span>
+            <span className="text-lg font-semibold text-emerald-400">${forecast.projected_revenue_90_days.toLocaleString()}</span>
+          </div>
+          <div className="border-t pt-4 flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Pipeline Value</span>
+            <span className="text-lg font-bold">${forecast.weighted_pipeline_value.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Confidence</span>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+              {(forecast.forecast_confidence * 100).toFixed(0)}%
+            </Badge>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SourceEffectivenessCard({ sources }: { sources: Array<{ source: string; total_leads: number; conversion_rate: number; avg_deal_value: number; revenue: number }> }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <PieChart className="h-5 w-5 text-primary" />
+          Source Effectiveness
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {sources.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No source data available</p>
+        ) : (
+          <div className="space-y-4">
+            {sources.map((source, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                <div>
+                  <p className="text-sm font-medium capitalize">{source.source.replace('_', ' ')}</p>
+                  <p className="text-xs text-muted-foreground">{source.total_leads} leads</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-emerald-400">${source.revenue.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{source.conversion_rate}% conversion</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function DashboardPage() {
   const [pipeline, setPipeline] = useState<PipelineItem[]>([])
   const [stats, setStats] = useState<DashboardStats>({
@@ -48,20 +159,23 @@ export default function DashboardPage() {
     deals_by_stage: {},
     recent_activities: [],
   })
+  const [marketIntelligence, setMarketIntelligence] = useState<MarketIntelligenceDashboard | null>(null)
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       try {
-        const [pipelineResponse, statsData, agentsData] = await Promise.all([
+        const [pipelineResponse, statsData, agentsData, marketData] = await Promise.all([
           api.dashboard.pipeline(),
           api.dashboard.stats(),
           api.agents.list(),
+          api.dashboard.marketIntelligence(30),
         ])
         setPipeline((pipelineResponse as PipelineData).items)
         setStats(statsData)
         setAgents(agentsData)
+        setMarketIntelligence(marketData)
       } catch (e) {
         console.error('Failed to load dashboard', e)
       } finally {
@@ -164,6 +278,54 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <PipelineChart dealsByStage={dealsByStage} dealsValueByStage={dealsValueByStage} />
+
+          {marketIntelligence && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                    Market Intelligence - Conversion Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <div className="p-3 rounded-lg bg-secondary/50 text-center">
+                      <p className="text-2xl font-bold text-blue-400">{marketIntelligence.conversion_metrics.lead_to_contacted_rate}%</p>
+                      <p className="text-xs text-muted-foreground">Lead → Contacted</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-secondary/50 text-center">
+                      <p className="text-2xl font-bold text-blue-400">{marketIntelligence.conversion_metrics.contacted_to_qualified_rate}%</p>
+                      <p className="text-xs text-muted-foreground">Contacted → Qualified</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-secondary/50 text-center">
+                      <p className="text-2xl font-bold text-yellow-400">{marketIntelligence.conversion_metrics.qualified_to_proposal_rate}%</p>
+                      <p className="text-xs text-muted-foreground">Qualified → Proposal</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-secondary/50 text-center">
+                      <p className="text-2xl font-bold text-orange-400">{marketIntelligence.conversion_metrics.proposal_to_negotiation_rate}%</p>
+                      <p className="text-xs text-muted-foreground">Proposal → Negotiation</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-secondary/50 text-center">
+                      <p className="text-2xl font-bold text-emerald-400">{marketIntelligence.conversion_metrics.negotiation_to_won_rate}%</p>
+                      <p className="text-xs text-muted-foreground">Negotiation → Won</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-center">
+                    <div className="px-6 py-3 rounded-lg bg-primary/10 text-center">
+                      <p className="text-3xl font-bold text-primary">{marketIntelligence.conversion_metrics.overall_conversion_rate}%</p>
+                      <p className="text-sm text-muted-foreground">Overall Conversion Rate</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <RevenueForecastCard forecast={marketIntelligence.revenue_forecast} />
+                <SourceEffectivenessCard sources={marketIntelligence.source_effectiveness} />
+              </div>
+            </>
+          )}
 
           <Card>
             <CardHeader>
