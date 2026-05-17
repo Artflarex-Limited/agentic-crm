@@ -69,9 +69,9 @@ class Settings(BaseSettings):
     ml_model_service_url: str = "http://localhost:8001"
     ml_inference_timeout: int = 30
 
-    # Celery
-    celery_broker_url: str = "redis://localhost:6379/0"
-    celery_result_backend: str = "redis://localhost:6379/0"
+    # Celery (DEPRECATED — agents use FastAPI BackgroundTasks)
+    # celery_broker_url: str = "redis://localhost:6379/0"
+    # celery_result_backend: str = "redis://localhost:6379/0"
     celery_task_time_limit: int = 300
     celery_worker_concurrency: int = 4
 
