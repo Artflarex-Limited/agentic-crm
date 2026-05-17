@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 
 from app.agents.context import AgentContext, get_current_correlation_id, get_current_run_id
-from app.models import AgentRole, LeadStage
+from app.models import AgentRole, AgentStatus, LeadStage
 from app.prisma import prisma
 
 logger = logging.getLogger(__name__)
