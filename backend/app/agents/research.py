@@ -6,7 +6,7 @@ import json
 import logging
 
 from app.agents.context import AgentContext, get_current_correlation_id, get_current_run_id
-from app.models.models import AgentRole, AuditLog, Company, Lead
+from app.models import AgentRole
 from app.prisma import prisma
 from app.services.enrichment_service import EnrichmentService
 

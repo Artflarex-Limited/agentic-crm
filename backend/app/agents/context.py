@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from datetime import datetime
 from typing import Any
 
-from app.models.models import AgentRole
+from app.models import AgentRole
 
 agent_run_id: ContextVar[str] = ContextVar("agent_run_id", default="")
 agent_correlation_id: ContextVar[str] = ContextVar("agent_correlation_id", default="")
