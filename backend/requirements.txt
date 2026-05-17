@@ -7,9 +7,8 @@ email-validator>=2.1.0
 slowapi>=0.1.9
 
 # Database
-sqlalchemy[asyncio]>=2.0.35
-alembic>=1.13.2
-greenlet>=3.0.3
+aiosqlite>=0.20.0
+prisma>=0.13.0
 
 # AI / Agents
 langchain>=0.2.0
