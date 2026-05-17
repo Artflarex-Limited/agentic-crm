@@ -4,11 +4,10 @@ POST /api/ai/categorize
 """
 import logging
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
-from typing import Optional
 
-from app.services.categorization_service import CategorizationService, get_categorization_service
+from app.services.categorization_service import get_categorization_service
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 logger = logging.getLogger(__name__)
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class CategorizeTextRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=10000, description="Product text description")
-    name: Optional[str] = Field(None, description="Product name")
+    name: str | None = Field(None, description="Product name")
 
 
 class CategorizeResponse(BaseModel):
@@ -34,8 +33,8 @@ class CategorizeBatchRequest(BaseModel):
 
 @router.post("/categorize", response_model=CategorizeResponse)
 async def categorize_product(
-    text: Optional[str] = None,
-    image: Optional[UploadFile] = File(None),
+    text: str | None = None,
+    image: UploadFile | None = File(None),
 ):
     """
     Categorize a product using AI (image + NLP).

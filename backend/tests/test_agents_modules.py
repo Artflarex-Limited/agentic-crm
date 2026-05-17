@@ -3,23 +3,21 @@ Tests for agent modules to improve coverage.
 Covers: email_outreach, follow_up, research, qualification, reporting,
 lead_sourcing, supplier_matching, rfq, procurement agents.
 """
-import json
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 
 from app.agents import (
     email_outreach,
     follow_up,
+    lead_sourcing,
     qualification,
     reporting,
     research,
-    lead_sourcing,
 )
-from app.agents.context import AgentContext, generate_run_id, generate_correlation_id
-from app.models.models import AgentRole, LeadStage, DealStage
+from app.agents.context import AgentContext, generate_correlation_id, generate_run_id
+from app.models.models import AgentRole, DealStage, LeadStage
 
 
 @pytest.fixture

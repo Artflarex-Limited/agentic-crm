@@ -12,7 +12,7 @@ import httpx
 from agentic_crm_sdk.config import SDKConfig
 
 if TYPE_CHECKING:
-    from agentic_crm_sdk import leads, contacts, deals, activities, agents, sequences
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,6 @@ class AsyncAgenticCRM:
         **kwargs: Any,
     ) -> httpx.Response:
         retries = retries if retries is not None else self.config.max_retries
-        url = f"{self.base_url}{path}"
 
         for attempt in range(retries):
             try:
@@ -85,7 +84,7 @@ class AsyncAgenticCRM:
                         request=response.request,
                         response=response,
                     )
-            except (httpx.ConnectError, httpx.TimeoutException) as e:
+            except (httpx.ConnectError, httpx.TimeoutException):
                 if attempt < retries - 1:
                     await asyncio.sleep(self.config.retry_delay)
                     continue

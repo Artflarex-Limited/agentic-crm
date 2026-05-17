@@ -1,8 +1,10 @@
 import asyncio
 import os
+
 os.environ["DATABASE_URL"] = "file::memory:?cache=shared"
 
 from app.prisma import prisma
+
 
 async def test():
     await prisma.connect()

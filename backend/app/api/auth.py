@@ -1,11 +1,11 @@
 """
 Authentication API routes - Login, Token Refresh, and Registration
 """
-import logging
-from datetime import datetime, timedelta, timezone
-
 import hashlib
 import hmac
+import logging
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
@@ -60,11 +60,11 @@ REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 def create_refresh_token(subject: str) -> str:
     """Create a refresh token with longer expiration."""
-    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode = {
         "sub": str(subject),
         "exp": expire,
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
         "type": "refresh",
     }
     import jwt

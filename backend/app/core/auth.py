@@ -3,7 +3,7 @@ JWT Authentication Middleware
 Shared auth for all FastAPI microservices.
 """
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
@@ -42,7 +42,7 @@ class AuthMiddleware:
         if expires_delta is None:
             expires_delta = timedelta(minutes=self.access_token_expire_minutes)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expire = now + expires_delta
 
         to_encode: dict[str, Any] = {

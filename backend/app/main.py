@@ -3,13 +3,10 @@ Agentic CRM - FastAPI Application Entry Point
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.core.config import get_settings
-from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.api import (
     activities,
     agents,
@@ -25,6 +22,8 @@ from app.api import (
     sequences,
     webhooks,
 )
+from app.core.config import get_settings
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.mcp import mcp_router
 from app.prisma import connect_prisma, disconnect_prisma
 

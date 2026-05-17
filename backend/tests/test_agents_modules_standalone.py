@@ -2,7 +2,6 @@
 Standalone tests for agent modules - minimal conftest replacement.
 These tests mock the prisma module at import time to avoid the generation check.
 """
-import json
 import sys
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -794,7 +793,7 @@ class TestProcurementAgent:
         mock_prisma.procurementrequest.find_many = AsyncMock(return_value=[mock_req])
         mock_prisma.auditlog.create = AsyncMock()
 
-        with patch("app.services.procurement_service.get_procurement_service") as mock_ps, \
+        with patch("app.services.procurement_service.get_procurement_service") as _, \
              patch("app.services.supplier_matching_service.get_supplier_matching_service") as mock_ms:
 
             mock_ms.return_value.get_top_suppliers_for_rfq = AsyncMock(return_value=[])
@@ -897,7 +896,7 @@ class TestAgentContext:
         assert ctx_dict["role"] == AgentRole.RESEARCH.value
 
     def test_agent_context_context_manager(self):
-        from app.agents.context import AgentContext, get_current_run_id, get_current_correlation_id
+        from app.agents.context import AgentContext, get_current_run_id
         from app.models.models import AgentRole
 
         initial_run = get_current_run_id()

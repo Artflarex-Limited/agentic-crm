@@ -102,7 +102,7 @@ async def check_shipment_status(correlation_id: str | None = None):
     AgentContext(role=AgentRole.REPORTING)
 
     logger.info(
-        f"Checking shipment statuses",
+        "Checking shipment statuses",
         extra={"run_id": run_id, "correlation_id": corr_id}
     )
 
@@ -232,7 +232,7 @@ async def auto_close_completed_orders(correlation_id: str | None = None):
     AgentContext(role=AgentRole.OUTREACH)
 
     logger.info(
-        f"Auto-closing completed orders",
+        "Auto-closing completed orders",
         extra={"run_id": run_id, "correlation_id": corr_id}
     )
 

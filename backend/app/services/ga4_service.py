@@ -4,7 +4,6 @@ Server-side event tracking via GA4 Measurement Protocol.
 """
 import logging
 import uuid
-from datetime import datetime
 
 import httpx
 
@@ -28,20 +27,15 @@ class GA4Service:
         params: dict | None = None,
     ) -> dict:
         """Build GA4 event payload."""
-        event = {
-            "name": event_name,
-            "params": params or {},
-        }
-
-        payload = {
+        _payload = {
             "client_id": client_id,
             "events": [{"name": event_name, "params": params or {}}],
         }
 
         if user_id:
-            payload["user_id"] = user_id
+            _payload["user_id"] = user_id
 
-        return payload
+        return _payload
 
     async def track_event(
         self,

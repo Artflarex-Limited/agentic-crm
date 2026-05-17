@@ -138,9 +138,7 @@ class RFQService:
 
         update_data: dict = {"stage": new_stage_value}
 
-        if new_stage_value == "WON":
-            update_data["actual_close_date"] = datetime.utcnow()
-        elif new_stage_value == "LOST":
+        if new_stage_value == "WON" or new_stage_value == "LOST":
             update_data["actual_close_date"] = datetime.utcnow()
 
         await prisma.deal.update(where={"id": deal_id}, data=update_data)

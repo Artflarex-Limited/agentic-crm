@@ -16,7 +16,9 @@ from datetime import datetime
 from app.agents.context import AgentContext, get_current_correlation_id, get_current_run_id
 from app.models import AgentRole
 from app.prisma import prisma
-from app.services.supplier_matching_service import SupplierMatchingService, get_supplier_matching_service
+from app.services.supplier_matching_service import (
+    SupplierMatchingService,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -167,12 +167,12 @@ class TestGetTopSuppliersForRfq:
         for i in range(15):
             await prisma.supplier.create(
                 data={
-                    "company_name": f"Supplier {i}",
+                    "companyName": f"Supplier {i}",
                     "country": "Germany",
-                    "business_email": f"info@supplier{i}.de",
+                    "businessEmail": f"info@supplier{i}.de",
                     "industry": "Electronics",
                     "status": SupplierStatus.VERIFIED.value,
-                    "exporting_to_eu": True,
+                    "exportingToEu": True,
                 }
             )
 
@@ -190,22 +190,22 @@ class TestGetTopSuppliersForRfq:
         await prisma.supplier.delete_many(where={})
         await prisma.supplier.create(
             data={
-                "company_name": "German Supplier",
+                "companyName": "German Supplier",
                 "country": "Germany",
-                "business_email": "info@german.de",
+                "businessEmail": "info@german.de",
                 "industry": "Electronics",
                 "status": SupplierStatus.VERIFIED.value,
-                "exporting_to_eu": True,
+                "exportingToEu": True,
             }
         )
         await prisma.supplier.create(
             data={
-                "company_name": "Turkish Supplier",
+                "companyName": "Turkish Supplier",
                 "country": "Turkey",
-                "business_email": "info@turkish.tr",
+                "businessEmail": "info@turkish.tr",
                 "industry": "Electronics",
                 "status": SupplierStatus.VERIFIED.value,
-                "exporting_to_eu": False,
+                "exportingToEu": False,
             }
         )
 
@@ -223,22 +223,22 @@ class TestGetTopSuppliersForRfq:
         await prisma.supplier.delete_many(where={})
         await prisma.supplier.create(
             data={
-                "company_name": "Low Score Supplier",
+                "companyName": "Low Score Supplier",
                 "country": "Germany",
-                "business_email": "info@low.de",
+                "businessEmail": "info@low.de",
                 "industry": "Food",
                 "status": SupplierStatus.VERIFIED.value,
-                "exporting_to_eu": True,
+                "exportingToEu": True,
             }
         )
         await prisma.supplier.create(
             data={
-                "company_name": "High Score Supplier",
+                "companyName": "High Score Supplier",
                 "country": "Germany",
-                "business_email": "info@high.de",
+                "businessEmail": "info@high.de",
                 "industry": "Electronics",
                 "status": SupplierStatus.VERIFIED.value,
-                "exporting_to_eu": True,
+                "exportingToEu": True,
                 "certifications": "CE,ISO 9001",
             }
         )

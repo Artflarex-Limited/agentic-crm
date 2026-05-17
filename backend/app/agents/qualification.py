@@ -4,7 +4,6 @@ Scores and routes leads, updates pipeline stages.
 """
 import json
 import logging
-from datetime import datetime
 
 from app.agents.context import AgentContext, get_current_correlation_id, get_current_run_id
 from app.models import AgentRole, AgentStatus, LeadStage

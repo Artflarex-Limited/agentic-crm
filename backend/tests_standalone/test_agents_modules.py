@@ -2,10 +2,9 @@
 Tests for agent modules - standalone test file.
 Run with: python -m pytest tests_standalone/test_agents_modules.py -v
 """
-import json
 import sys
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
