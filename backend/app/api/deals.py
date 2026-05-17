@@ -1,13 +1,10 @@
 """
 Deals API routes
 """
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+import json
+from fastapi import APIRouter, HTTPException
 
-from app.db.database import get_db
-from app.models.models import Deal
+from app.prisma import prisma
 from app.schemas.schemas import DealCreate, DealResponse, DealUpdate
 from app.services.rfq_service import get_rfq_service
 
@@ -15,32 +12,33 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[DealResponse])
-async def list_deals(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Deal).options(selectinload(Deal.contact), selectinload(Deal.company))
-        .order_by(Deal.id.desc())
+async def list_deals():
+    deals = await prisma.deal.find_many(
+        order={"id": "desc"},
+        include={"contact": True, "company": True},
     )
-    return result.scalars().all()
+    return [_prisma_to_dict(d) for d in deals]
 
 
 @router.get("/{deal_id}", response_model=DealResponse)
-async def get_deal(deal_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Deal).where(Deal.id == deal_id)
-        .options(selectinload(Deal.contact), selectinload(Deal.company))
+async def get_deal(deal_id: int):
+    deal = await prisma.deal.find_unique(
+        where={"id": deal_id},
+        include={"contact": True, "company": True},
     )
-    deal = result.scalar_one_or_none()
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
-    return deal
+    return _prisma_to_dict(deal)
 
 
 @router.post("/", response_model=DealResponse, status_code=201)
-async def create_deal(data: DealCreate, db: AsyncSession = Depends(get_db)):
-    deal = Deal(**data.model_dump())
-    db.add(deal)
-    await db.commit()
-    await db.refresh(deal)
+async def create_deal(data: DealCreate):
+    data_dict = data.model_dump()
+    deal = await prisma.deal.create(data=data_dict)
+    deal = await prisma.deal.find_unique(
+        where={"id": deal.id},
+        include={"contact": True, "company": True},
+    )
 
     if deal.value and deal.value > 0:
         from app.services.ga4_service import get_ga4_service, generate_ga_client_id
@@ -54,7 +52,7 @@ async def create_deal(data: DealCreate, db: AsyncSession = Depends(get_db)):
             user_email=contact.email if contact else None,
         )
 
-    return deal
+    return _prisma_to_dict(deal)
 
 
 @router.post("/from-lead/{lead_id}", response_model=DealResponse, status_code=201)
@@ -63,7 +61,6 @@ async def create_rfq_from_lead(
     deal_name: str | None = None,
     deal_value: float = 0.0,
     expected_close_days: int = 30,
-    db: AsyncSession = Depends(get_db),
 ):
     """
     Generate an RFQ (deal) from a lead.
@@ -80,8 +77,10 @@ async def create_rfq_from_lead(
     if not result:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    deal_result = await db.execute(select(Deal).where(Deal.id == result["deal_id"]))
-    deal = deal_result.scalar_one_or_none()
+    deal = await prisma.deal.find_unique(
+        where={"id": result["deal_id"]},
+        include={"contact": True, "company": True},
+    )
     if not deal:
         raise HTTPException(status_code=500, detail="RFQ creation failed")
 
@@ -97,15 +96,11 @@ async def create_rfq_from_lead(
             user_email=contact.email if contact else None,
         )
 
-    return deal
+    return _prisma_to_dict(deal)
 
 
 @router.put("/{deal_id}/advance", response_model=DealResponse)
-async def advance_rfq_stage(
-    deal_id: int,
-    target_stage: str,
-    db: AsyncSession = Depends(get_db),
-):
+async def advance_rfq_stage(deal_id: int, target_stage: str):
     """
     Advance RFQ to next pipeline stage.
     """
@@ -115,11 +110,10 @@ async def advance_rfq_stage(
     if not success:
         raise HTTPException(status_code=404, detail="Deal not found")
 
-    result = await db.execute(
-        select(Deal).where(Deal.id == deal_id)
-        .options(selectinload(Deal.contact), selectinload(Deal.company))
+    deal = await prisma.deal.find_unique(
+        where={"id": deal_id},
+        include={"contact": True, "company": True},
     )
-    deal = result.scalar_one_or_none()
 
     if deal and deal.value and deal.value > 0:
         from app.services.ga4_service import get_ga4_service, generate_ga_client_id
@@ -128,27 +122,32 @@ async def advance_rfq_stage(
         await ga4_service.track_deal_stage_changed(
             client_id=generate_ga_client_id(),
             deal_id=deal.id,
-            old_stage=str(deal.stage) if hasattr(deal.stage, 'value') else str(deal.stage),
+            old_stage=str(deal.stage) if hasattr(deal.stage, "value") else str(deal.stage),
             new_stage=target_stage,
             deal_value=deal.value,
             user_email=contact.email if contact else None,
         )
 
-    return deal
+    return _prisma_to_dict(deal)
 
 
 @router.put("/{deal_id}", response_model=DealResponse)
-async def update_deal(deal_id: int, data: DealUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Deal).where(Deal.id == deal_id))
-    deal = result.scalar_one_or_none()
-    if not deal:
+async def update_deal(deal_id: int, data: DealUpdate):
+    existing = await prisma.deal.find_unique(where={"id": deal_id})
+    if not existing:
         raise HTTPException(status_code=404, detail="Deal not found")
 
-    old_stage = deal.stage
-    for key, value in data.model_dump(exclude_unset=True).items():
-        setattr(deal, key, value)
-    await db.commit()
-    await db.refresh(deal)
+    old_stage = existing.stage
+    update_data = data.model_dump(exclude_unset=True)
+
+    deal = await prisma.deal.update(
+        where={"id": deal_id},
+        data=update_data,
+    )
+    deal = await prisma.deal.find_unique(
+        where={"id": deal_id},
+        include={"contact": True, "company": True},
+    )
 
     if data.stage and data.stage != old_stage:
         from app.services.ga4_service import get_ga4_service, generate_ga_client_id
@@ -157,21 +156,33 @@ async def update_deal(deal_id: int, data: DealUpdate, db: AsyncSession = Depends
         await ga4_service.track_deal_stage_changed(
             client_id=generate_ga_client_id(),
             deal_id=deal.id,
-            old_stage=old_stage,
+            old_stage=str(old_stage) if hasattr(old_stage, "value") else str(old_stage),
             new_stage=data.stage,
             deal_value=deal.value,
             user_email=contact.email if contact else None,
         )
 
-    return deal
+    return _prisma_to_dict(deal)
 
 
 @router.delete("/{deal_id}")
-async def delete_deal(deal_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Deal).where(Deal.id == deal_id))
-    deal = result.scalar_one_or_none()
-    if not deal:
+async def delete_deal(deal_id: int):
+    existing = await prisma.deal.find_unique(where={"id": deal_id})
+    if not existing:
         raise HTTPException(status_code=404, detail="Deal not found")
-    await db.delete(deal)
-    await db.commit()
+    await prisma.deal.delete(where={"id": deal_id})
     return {"deleted": True}
+
+
+def _prisma_to_dict(obj) -> dict:
+    """Convert Prisma model to dict, parsing JSON string fields."""
+    d = {}
+    for key, value in obj.model_dump().items():
+        if key in ("tags", "extra_data") and isinstance(value, str):
+            try:
+                d[key] = json.loads(value) if value else []
+            except (json.JSONDecodeError, TypeError):
+                d[key] = value if value else []
+        else:
+            d[key] = value
+    return d

@@ -3,7 +3,7 @@ Sequences API routes
 """
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from app.prisma import prisma
 from app.schemas.schemas import SequenceCreate, SequenceResponse
@@ -74,14 +74,32 @@ async def delete_sequence(sequence_id: int):
 
 
 @router.post("/{sequence_id}/enroll/{lead_id}")
-async def enroll_lead(sequence_id: int, lead_id: int):
-    """Enroll a lead into a sequence"""
+async def enroll_lead(sequence_id: int, lead_id: int, background_tasks: BackgroundTasks):
+    """Enroll a lead into a sequence and trigger outreach agent"""
     # Verify lead exists
     lead = await prisma.lead.find_first(where={"id": lead_id})
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
+    # Verify sequence exists
+    seq = await prisma.sequence.find_first(where={"id": sequence_id})
+    if not seq:
+        raise HTTPException(status_code=404, detail="Sequence not found")
+
     enrollment = await prisma.sequenceenrollment.create(
         data={"leadId": lead_id, "sequenceId": sequence_id}
     )
+
+    # Kick off the outreach agent in the background
+    from app.agents.email_outreach import send_sequence
+    background_tasks.add_task(send_sequence, lead_id, sequence_id)
+
     return {"enrolled": True, "enrollment_id": enrollment.id}
+
+
+@router.post("/{sequence_id}/send/{lead_id}")
+async def send_sequence_now(sequence_id: int, lead_id: int, background_tasks: BackgroundTasks):
+    """Trigger immediate email sequence send for a lead (bypass schedule)"""
+    from app.agents.email_outreach import send_sequence
+    background_tasks.add_task(send_sequence, lead_id, sequence_id)
+    return {"message": "Sequence task queued", "lead_id": lead_id, "sequence_id": sequence_id}

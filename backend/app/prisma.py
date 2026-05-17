@@ -2,7 +2,7 @@
 Prisma Client singleton for Agentic CRM.
 Use `from app.prisma import prisma` throughout the application.
 """
-from prisma import Prisma
+from app.generated import Prisma
 
 # Singleton instance — import this wherever you need DB access
 prisma = Prisma()

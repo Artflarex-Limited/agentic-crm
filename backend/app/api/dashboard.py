@@ -170,7 +170,7 @@ async def get_market_intelligence(
         source_leads = [
             l for l in all_leads
             if (l.source.value if hasattr(l.source, 'value') else str(l.source)) == source
-            and l.stage.value if hasattr(l.stage, 'value') else str(l.stage) in ["qualified", "proposal", "negotiation", "won"]
+            and (l.stage.value if hasattr(l.stage, 'value') else str(l.stage)) in ["qualified", "proposal", "negotiation", "won"]
         ]
         converted = len(source_leads)
         source_conversion = (converted / count * 100) if count > 0 else 0.0

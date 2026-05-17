@@ -17,7 +17,7 @@ class SearchService:
     async def health_check(self) -> dict[str, Any]:
         """Check search service health."""
         try:
-            await prisma.$connect()
+            await prisma.connect()
             return {"status": "healthy", "provider": "prisma-sqlite"}
         except Exception as e:
             return {"status": "unhealthy", "error": str(e)}

@@ -9,6 +9,7 @@ slowapi>=0.1.9
 # Database
 aiosqlite>=0.20.0
 prisma>=0.13.0
+tomlkit>=0.13.0
 
 # AI / Agents
 langchain>=0.2.0

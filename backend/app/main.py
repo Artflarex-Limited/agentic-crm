@@ -10,12 +10,6 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import get_settings
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
-from app.core.clients import (
-    check_all_health,
-    check_database_health,
-    check_redis_health,
-    check_elasticsearch_health,
-)
 from app.api import (
     activities,
     agents,
@@ -32,15 +26,16 @@ from app.api import (
     webhooks,
 )
 from app.mcp import mcp_router
-from app.db.database import init_db
+from app.prisma import connect_prisma, disconnect_prisma
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    await connect_prisma()
     yield
+    await disconnect_prisma()
 
 
 app = FastAPI(
@@ -83,31 +78,14 @@ async def health():
     return {"status": "healthy", "version": "0.1.0"}
 
 
-@app.get("/health/detailed")
-async def health_detailed():
-    health_status = await check_all_health()
-    return {
-        "status": "healthy" if all(s.get("status") == "healthy" for s in health_status.values()) else "degraded",
-        "services": health_status,
-    }
-
-
 @app.get("/health/db")
 async def health_db():
-    status = await check_database_health()
-    return status
-
-
-@app.get("/health/redis")
-async def health_redis():
-    status = await check_redis_health()
-    return status
-
-
-@app.get("/health/elasticsearch")
-async def health_elasticsearch():
-    status = await check_elasticsearch_health()
-    return status
+    try:
+        from app.prisma import prisma
+        await prisma.user.count()
+        return {"status": "healthy", "service": "sqlite"}
+    except Exception as e:
+        return {"status": "unhealthy", "service": "sqlite", "error": str(e)}
 
 
 @app.get("/")

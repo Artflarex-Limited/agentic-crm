@@ -21,6 +21,24 @@ def mock_prisma():
     return prisma_mock
 
 
+@pytest.fixture
+def sample_lead():
+    return MagicMock(id=1, score=50, stage="new")
+
+
+@pytest.fixture
+def sample_contact():
+    return MagicMock(
+        id=1,
+        email="test@example.com",
+        phone="+1-555-0100",
+        linkedin_url="https://linkedin.com/in/test",
+        title="Manager",
+        company_id=1,
+        extra_data=None
+    )
+
+
 class TestEmailOutreachAgent:
     """Tests for email_outreach agent functions."""
 

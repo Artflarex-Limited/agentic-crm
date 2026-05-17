@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.models.models import ActivityType, AgentRole, AgentStatus, DealStage, LeadSource, LeadStage
+from app.enums import ActivityType, AgentRole, AgentStatus, DealStage, LeadSource, LeadStage
 
 
 # ─── Company ──────────────────────────────────────────────────────────────────

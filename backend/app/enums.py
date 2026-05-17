@@ -71,3 +71,37 @@ class InvoiceStatus(StrEnum):
     PAID = "paid"
     OVERDUE = "overdue"
     CANCELLED = "cancelled"
+
+
+class SupplierStatus(StrEnum):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    REJECTED = "rejected"
+    SUSPENDED = "suspended"
+
+
+class ProcurementStatus(StrEnum):
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    QUOTES_RECEIVED = "quotes_received"
+    APPROVED = "approved"
+    ORDERED = "ordered"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+
+class QuoteStatus(StrEnum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+
+
+
+class ShipmentStatus(StrEnum):
+    PREPARING = "preparing"
+    SHIPPED = "shipped"
+    IN_TRANSIT = "in_transit"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"

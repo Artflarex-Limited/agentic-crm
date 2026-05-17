@@ -61,7 +61,7 @@ class SupplierMatchingService:
             List of SupplierMatchResult sorted by match_score descending
         """
         try:
-            await prisma.$connect()
+            await prisma.connect()
         except Exception:
             pass
 
