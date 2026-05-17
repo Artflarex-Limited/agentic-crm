@@ -1,8 +1,9 @@
 'use client'
 
-import Link from 'next/link'
-import { Bot, Brain, Send, BarChart3, ArrowRight, CheckCircle2, Zap } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Bot, Brain, Send, BarChart3, ArrowRight, CheckCircle2, Zap } from 'lucide-react'
 import { trackPageView, trackMetaPageView } from '@/lib/tracking'
 
 const features = [
@@ -82,10 +83,18 @@ const DemoSection = ({ onVisible }: { onVisible: () => void }) => {
 }
 
 export default function LandingPage() {
+  const router = useRouter()
+
   useEffect(() => {
+    const token = localStorage.getItem('openclaw_auth_token')
+    if (token) {
+      router.replace('/dashboard')
+      return
+    }
     trackPageView('/', 'Agentic CRM — AI-First CRM Platform')
     trackMetaPageView()
-  }, [])
+  }, [router])
+
   return (
     <div className="min-h-screen">
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-sm">
@@ -100,11 +109,11 @@ export default function LandingPage() {
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
             <a href="#demo" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Demo</a>
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-            <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link>
+            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign in</Link>
           </nav>
           <div className="flex items-center gap-4">
             <Link
-              href="/dashboard"
+              href="/login"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
             >
               Get Started
@@ -133,10 +142,10 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
-                  href="/dashboard"
+                  href="/login"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
                 >
-                  Try the Demo
+                  Get Started
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <a
@@ -221,7 +230,7 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
-                  href="/dashboard"
+                  href="/login"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
                 >
                   Launch Dashboard
