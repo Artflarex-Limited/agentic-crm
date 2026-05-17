@@ -48,10 +48,10 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-exclude = ["app/generated/**"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+exclude = ["backend/app/generated/**"]
 ignore = [
     "E501",   # line too long
     "E402",   # module level import not at top (generated files)
