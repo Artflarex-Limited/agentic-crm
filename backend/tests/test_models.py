@@ -1,7 +1,7 @@
 """
 Unit tests for Prisma models — CRUD operations
 """
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -108,7 +108,7 @@ async def test_deal_crud(session_prisma, sample_contact, sample_company):
             "name": "Big Deal",
             "value": 100000.0,
             "stage": DealStage.LEAD.value,
-            "expectedCloseDate": datetime.now(timezone.utc) + timedelta(days=60)
+            "expectedCloseDate": datetime.now(UTC) + timedelta(days=60)
         }
     )
     assert deal.id is not None
@@ -254,13 +254,13 @@ async def test_contact_relationships(session_prisma, sample_contact, sample_lead
         where={"id": sample_contact.id},
         include={"leads": True, "deals": True}
     )
-    assert any(l.id == sample_lead.id for l in fetched.leads)
-    assert any(d.id == sample_deal.id for d in fetched.deals)
+    assert any(lead.id == sample_lead.id for lead in fetched.leads)
+    assert any(deal.id == sample_deal.id for deal in fetched.deals)
 
 
 @pytest.mark.asyncio
 async def test_lead_snooze(session_prisma, sample_lead):
-    future = datetime.now(timezone.utc) + timedelta(days=3)
+    future = datetime.now(UTC) + timedelta(days=3)
     updated = await prisma.lead.update(
         where={"id": sample_lead.id},
         data={"snoozeUntil": future}
@@ -271,7 +271,7 @@ async def test_lead_snooze(session_prisma, sample_lead):
 
 @pytest.mark.asyncio
 async def test_lead_last_contacted(session_prisma, sample_lead):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     updated = await prisma.lead.update(
         where={"id": sample_lead.id},
         data={"lastContactedAt": now}

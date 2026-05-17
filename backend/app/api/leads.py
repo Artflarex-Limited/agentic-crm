@@ -2,6 +2,7 @@
 Leads API routes
 """
 import json
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from app.core.config import get_settings

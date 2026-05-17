@@ -1,11 +1,11 @@
 """
 Tests for async agent functions — Prisma-based
 """
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.enums import ActivityType, AgentRole, AgentStatus, DealStage, LeadSource, LeadStage
+from app.enums import ActivityType, AgentStatus, LeadStage
 from app.prisma import prisma
 
 
@@ -31,7 +31,7 @@ async def test_sequence_enrollment_status(session_prisma, sample_lead, sample_se
         where={"id": enrollment.id},
         data={
             "status": "completed",
-            "completedAt": datetime.now(timezone.utc)
+            "completedAt": datetime.now(UTC)
         }
     )
     assert updated.status == "completed"
@@ -159,7 +159,7 @@ async def test_check_engagement_with_replies(session_prisma, sample_lead, sample
 
 @pytest.mark.asyncio
 async def test_lead_snooze_mechanism(session_prisma, sample_lead):
-    future = datetime.now(timezone.utc) + timedelta(days=3)
+    future = datetime.now(UTC) + timedelta(days=3)
     updated = await prisma.lead.update(
         where={"id": sample_lead.id},
         data={"snoozeUntil": future}

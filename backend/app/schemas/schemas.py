@@ -3,7 +3,7 @@ Pydantic schemas for request/response validation
 """
 from datetime import datetime
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.enums import ActivityType, AgentRole, AgentStatus, DealStage, LeadSource, LeadStage
 

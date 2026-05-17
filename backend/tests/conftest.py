@@ -5,17 +5,16 @@ Prisma-based: uses app.prisma directly (no SQLAlchemy).
 import os
 import subprocess
 import sys
-import asyncio
 import tempfile
 from collections.abc import AsyncGenerator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.prisma import prisma, connect_prisma, disconnect_prisma
+from app.prisma import connect_prisma, disconnect_prisma, prisma
 
 
 def get_new_db_file():
@@ -106,7 +105,7 @@ async def sample_deal(sample_contact, sample_company):
             "name": "Acme Enterprise Deal",
             "value": 50000.0,
             "stage": DealStage.QUALIFIED.value,
-            "expectedCloseDate": datetime.now(timezone.utc) + timedelta(days=30),
+            "expectedCloseDate": datetime.now(UTC) + timedelta(days=30),
         }
     )
     return deal

@@ -2,6 +2,7 @@
 Deals API routes
 """
 import json
+
 from fastapi import APIRouter, HTTPException
 
 from app.prisma import prisma
@@ -75,7 +76,7 @@ async def create_rfq_from_lead(
         raise HTTPException(status_code=500, detail="RFQ creation failed")
 
     if deal.value and deal.value > 0:
-        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
+        from app.services.ga4_service import generate_ga_client_id, get_ga4_service
         ga4_service = await get_ga4_service()
         contact = deal.contact
         await ga4_service.track_generate_rfq(
@@ -106,7 +107,7 @@ async def advance_rfq_stage(deal_id: int, target_stage: str):
     )
 
     if deal and deal.value and deal.value > 0:
-        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
+        from app.services.ga4_service import generate_ga_client_id, get_ga4_service
         ga4_service = await get_ga4_service()
         contact = deal.contact
         await ga4_service.track_deal_stage_changed(
@@ -146,7 +147,7 @@ async def update_deal(deal_id: int, data: DealUpdate):
     )
 
     if data.stage and data.stage != old_stage:
-        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
+        from app.services.ga4_service import generate_ga_client_id, get_ga4_service
         ga4_service = await get_ga4_service()
         contact = deal.contact
         await ga4_service.track_deal_stage_changed(
