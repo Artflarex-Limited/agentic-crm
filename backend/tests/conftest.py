@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 
@@ -15,6 +16,12 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.prisma import connect_prisma, disconnect_prisma, prisma
+
+
+# Dynamically find the backend directory (works locally and in CI)
+def get_backend_dir():
+    """Return path to the backend directory."""
+    return str(Path(__file__).parent.parent.absolute())
 
 
 def get_new_db_file():
@@ -27,12 +34,13 @@ async def session_prisma():
     _test_db_file = get_new_db_file()
     os.environ["DATABASE_URL"] = f"file:{_test_db_file}"
 
+    backend_dir = get_backend_dir()
     subprocess.run(
         [sys.executable, "-m", "prisma", "db", "push", "--skip-generate",
          "--schema", "prisma/schema.prisma"],
         env={**os.environ},
         check=True,
-        cwd="/root/agentic-crm/backend",
+        cwd=backend_dir,
         capture_output=True,
     )
     await connect_prisma()
