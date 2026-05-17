@@ -19,6 +19,7 @@ from app.core.clients import (
 from app.api import (
     activities,
     agents,
+    auth,
     categorization,
     companies,
     contacts,
@@ -60,6 +61,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-API-Key"],
 )
 
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(contacts.router, prefix="/api/contacts", tags=["contacts"])
 app.include_router(companies.router, prefix="/api/companies", tags=["companies"])
 app.include_router(leads.router, prefix="/api/leads", tags=["leads"])
