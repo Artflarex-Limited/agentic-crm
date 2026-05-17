@@ -2,9 +2,10 @@
 Pytest fixtures for Agentic CRM backend tests
 Prisma-based: uses app.prisma directly (no SQLAlchemy).
 """
-import asyncio
 import os
 import subprocess
+import sys
+import asyncio
 import tempfile
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
@@ -14,53 +15,47 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.prisma import prisma
+from app.prisma import prisma, connect_prisma, disconnect_prisma
 
-# Use a temporary FILE-based SQLite DB per session
+# Temp SQLite file per test run
 _test_db_file = tempfile.mktemp(suffix=".db")
 os.environ["DATABASE_URL"] = f"file:{_test_db_file}"
+os.environ["PRISMA_CLIENT_ENGINE_TYPE"] = "library"  # avoids binary subprocess event-loop issues
 
 
-# ─── Session-scoped Prisma lifecycle (once per pytest session) ───────────────
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
+# ─── Session-scoped Prisma connection ─────────────────────────────────────────
 
 @pytest_asyncio.fixture(scope="session")
 async def session_prisma():
-    """Run prisma db push once, then connect once for all tests in this session."""
-    # Push schema to the temp DB (idempotent — only creates tables once)
+    """Push schema once, connect the module-level singleton for all tests."""
     subprocess.run(
-        ["python", "-m", "prisma", "db", "push", "--skip-generate",
+        [sys.executable, "-m", "prisma", "db", "push", "--skip-generate",
          "--schema", "prisma/schema.prisma"],
         env={**os.environ},
         check=True,
+        cwd="/root/agentic-crm/backend",
     )
-    await prisma.connect()
+    await connect_prisma()
     yield
-    await prisma.disconnect()
-    # Cleanup temp DB file
+    await disconnect_prisma()
     try:
         os.unlink(_test_db_file)
     except OSError:
         pass
 
 
-# ─── Function-scoped test client ────────────────────────────────────────────
+# ─── Per-test HTTP client (reuses session_prisma) ────────────────────────────
 
 @pytest_asyncio.fixture(scope="function")
 async def test_client(session_prisma) -> AsyncGenerator[AsyncClient, None]:
-    """HTTP client for FastAPI routes that use app.prisma directly."""
+    """HTTP client for FastAPI routes — reuses the session's connected Prisma."""
+    # Use a shared transport so httpx reuses the connection across tests
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
 
-# ─── Sample data helpers (Prisma-based) ──────────────────────────────────────
+# ─── Sample data helpers ──────────────────────────────────────────────────────
 
 @pytest_asyncio.fixture
 async def sample_company(session_prisma):
@@ -79,9 +74,9 @@ async def sample_company(session_prisma):
 async def sample_contact(sample_company):
     contact = await prisma.contact.create(
         data={
-            "company_id": sample_company.id,
-            "first_name": "John",
-            "last_name": "Doe",
+            "companyId": sample_company.id,
+            "firstName": "John",
+            "lastName": "Doe",
             "email": "john.doe@acme.com",
             "phone": "+1-555-0100",
             "title": "VP Engineering",
@@ -95,7 +90,7 @@ async def sample_lead(sample_contact):
     from app.enums import LeadSource, LeadStage
     lead = await prisma.lead.create(
         data={
-            "contact_id": sample_contact.id,
+            "contactId": sample_contact.id,
             "source": LeadSource.EMAIL.value,
             "stage": LeadStage.NEW.value,
             "score": 50,
@@ -111,12 +106,12 @@ async def sample_deal(sample_contact, sample_company):
     from app.enums import DealStage
     deal = await prisma.deal.create(
         data={
-            "contact_id": sample_contact.id,
-            "company_id": sample_company.id,
+            "contactId": sample_contact.id,
+            "companyId": sample_company.id,
             "name": "Acme Enterprise Deal",
             "value": 50000.0,
             "stage": DealStage.QUALIFIED.value,
-            "expected_close_date": datetime.utcnow() + timedelta(days=30),
+            "expectedCloseDate": datetime.utcnow() + timedelta(days=30),
         }
     )
     return deal
@@ -141,8 +136,8 @@ async def sample_activity(sample_lead, sample_agent):
     from app.enums import ActivityType
     activity = await prisma.activity.create(
         data={
-            "lead_id": sample_lead.id,
-            "agent_id": sample_agent.id,
+            "leadId": sample_lead.id,
+            "agentId": sample_agent.id,
             "type": ActivityType.EMAIL_SENT.value,
             "content": "Sent welcome email",
         }
@@ -153,6 +148,22 @@ async def sample_activity(sample_lead, sample_agent):
 @pytest.fixture
 def auth_headers() -> dict:
     return {"Authorization": "Bearer test-token"}
+
+
+@pytest_asyncio.fixture
+async def sample_sequence(session_prisma):
+    sequence = await prisma.sequence.create(
+        data={
+            "name": "Test Sequence",
+            "description": "Test sequence",
+            "steps": [
+                {"type": "email", "subject": "Hello", "content": "Hi!", "delay_days": 1},
+                {"type": "email", "subject": "Follow up", "content": "Bump", "delay_days": 3},
+            ],
+            "is_active": True
+        }
+    )
+    return sequence
 
 
 @pytest_asyncio.fixture

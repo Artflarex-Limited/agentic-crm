@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artflarex — LinkedIn Cover</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --deep-navy: #0A1628;
+      --electric-blue: #3B82F6;
+      --cyan: #06B6D4;
+      --white: #FFFFFF;
+      --muted: #94A3B8;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--deep-navy);
+      color: var(--white);
+      width: 1128px;
+      height: 191px;
+      overflow: hidden;
+    }
+    .container {
+      width: 1128px;
+      height: 191px;
+      background: linear-gradient(135deg, #0A1628 0%, #0F1E32 100%);
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .bg-pattern {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image:
+        radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 40%);
+    }
+    .content {
+      position: relative;
+      z-index: 10;
+      padding: 0 50px;
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      width: 100%;
+    }
+    .logo-mark {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+    }
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--white);
+    }
+    .divider {
+      width: 1px;
+      height: 60px;
+      background: rgba(255,255,255,0.15);
+      flex-shrink: 0;
+    }
+    .text-content {
+      flex: 1;
+    }
+    .headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+    .tagline {
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .gradient-line {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--electric-blue), var(--cyan));
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="bg-pattern"></div>
+    <div class="content">
+      <div class="logo-mark">
+        <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" rx="12" fill="url(#liLogoGrad)"/>
+          <path d="M14 24L20 18L26 24L20 30L14 24Z" fill="white" opacity="0.9"/>
+          <path d="M24 14L30 8L36 14L30 20L24 14Z" fill="white" opacity="0.7"/>
+          <path d="M24 34L30 28L36 34L30 40L24 34Z" fill="white" opacity="0.7"/>
+          <path d="M34 24L40 18L46 24L40 30L34 24Z" fill="white" opacity="0.5"/>
+          <defs>
+            <linearGradient id="liLogoGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#3B82F6"/>
+              <stop offset="1" stop-color="#06B6D4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="logo-text">Artflarex</span>
+      </div>
+      <div class="divider"></div>
+      <div class="text-content">
+        <div class="headline">AI-Powered ERP & CRM Solutions</div>
+        <div class="tagline">CRM that works for you — autonomous workflows, AI-powered insights</div>
+      </div>
+    </div>
+    <div class="gradient-line"></div>
+  </div>
+</body>
+</html>

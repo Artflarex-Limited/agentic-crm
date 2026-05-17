@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Search, Filter, Plus, X, ExternalLink, Mail, Phone, Building } from 'lucide-react'
+import { Search, Filter, Plus, X, ExternalLink, Mail, Phone, Building, Trash2 } from 'lucide-react'
 import { getStoredUTM, trackLeadCreated } from '@/lib/tracking'
+import { cn } from '@/lib/utils'
 
 const STAGES: { value: LeadStage; label: string; color: string; bgColor: string }[] = [
   { value: 'new', label: 'New', color: 'text-blue-400', bgColor: 'bg-blue-400/10' },
@@ -33,6 +34,17 @@ const SOURCES: { value: LeadSource; label: string }[] = [
   { value: 'other', label: 'Other' },
 ]
 
+function timeAgo(date: string | null): string {
+  if (!date) return 'Never'
+  const diff = Date.now() - new Date(date).getTime()
+  const days = Math.floor(diff / 86400000)
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days}d ago`
+  if (days < 30) return `${Math.floor(days / 7)}w ago`
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,7 +53,9 @@ export default function LeadsPage() {
   const [sourceFilter, setSourceFilter] = useState<string>('')
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Activity' | 'Notes'>('Overview')
   const [newLead, setNewLead] = useState({ contact: { first_name: '', last_name: '', email: '', phone: '', company: '' }, source: 'web' as LeadSource })
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     loadLeads()
@@ -175,10 +189,24 @@ export default function LeadsPage() {
       </Card>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-auto pb-20">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border bg-surface accent-accent cursor-pointer"
+                    checked={selectedLeadIds.size === leads.length && leads.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedLeadIds(new Set(leads.map(l => l.id)))
+                      } else {
+                        setSelectedLeadIds(new Set())
+                      }
+                    }}
+                  />
+                </TableHead>
                 <TableHead className="font-medium">Name</TableHead>
                 <TableHead className="font-medium">Email</TableHead>
                 <TableHead className="font-medium">Company</TableHead>
@@ -194,13 +222,31 @@ export default function LeadsPage() {
                 return (
                   <TableRow 
                     key={lead.id} 
-                    className="cursor-pointer hover:bg-secondary/30 transition-colors"
-                    onClick={() => setSelectedLead(lead)}
+                    className="cursor-pointer border-b border-border/50 hover:bg-surface/50 transition-colors duration-100"
+                    onClick={() => { setSelectedLead(lead); setActiveTab('Overview') }}
                   >
+                    <TableCell className="w-10">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-border bg-surface accent-accent cursor-pointer"
+                        checked={selectedLeadIds.has(lead.id)}
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          const newSet = new Set(selectedLeadIds)
+                          if (e.target.checked) {
+                            newSet.add(lead.id)
+                          } else {
+                            newSet.delete(lead.id)
+                          }
+                          setSelectedLeadIds(newSet)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-xs font-medium text-primary">
+                        <div className="w-8 h-8 rounded-[var(--radius-md)] bg-accent/10 flex items-center justify-center">
+                          <span className="text-xs font-semibold text-accent">
                             {lead.contact?.first_name?.[0]}{lead.contact?.last_name?.[0]}
                           </span>
                         </div>
@@ -220,7 +266,7 @@ export default function LeadsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-normal">{lead.source.replace('_', ' ')}</Badge>
+                      <span className="bg-surface text-text-secondary border border-border rounded-[var(--radius-sm)] text-xs px-2 py-1">{lead.source.replace('_', ' ')}</span>
                     </TableCell>
                     <TableCell>
                       <Badge className={`${stage?.bgColor} ${stage?.color} border-0`}>
@@ -229,11 +275,11 @@ export default function LeadsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 rounded-full bg-secondary">
+                        <div className="h-1.5 rounded-full bg-surface overflow-hidden w-16">
                           <div 
                             className={`h-full rounded-full ${
-                              lead.score >= 70 ? 'bg-emerald-400' : 
-                              lead.score >= 40 ? 'bg-amber-400' : 'bg-red-400'
+                              lead.score >= 70 ? 'bg-success' : 
+                              lead.score >= 40 ? 'bg-accent' : 'bg-danger'
                             }`} 
                             style={{ width: `${lead.score}%` }}
                           />
@@ -241,10 +287,8 @@ export default function LeadsPage() {
                         <span className="text-sm font-mono">{lead.score}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {lead.last_contacted_at
-                        ? new Date(lead.last_contacted_at).toLocaleDateString()
-                        : 'Never'}
+                    <TableCell>
+                      <span className="text-text-muted text-sm">{timeAgo(lead.last_contacted_at ?? null)}</span>
                     </TableCell>
                   </TableRow>
                 )
@@ -269,65 +313,170 @@ export default function LeadsPage() {
         </CardContent>
       </Card>
 
+      {selectedLeadIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-4 rounded-[var(--radius-lg)] bg-surface border border-border shadow-[0_8px_32px_rgba(0,0,0,0.4)] animate-in slide-in-from-bottom-4 duration-200">
+          <span className="text-sm font-medium text-text-primary">
+            {selectedLeadIds.size} selected
+          </span>
+          
+          <div className="h-4 w-px bg-border" />
+          
+          <Select
+            onValueChange={async (stage) => {
+              for (const id of Array.from(selectedLeadIds)) {
+                try {
+                  await api.leads.update(id, { stage: stage as LeadStage })
+                } catch (e) {
+                  console.error(`Failed to update lead ${id}`, e)
+                }
+              }
+              setSelectedLeadIds(new Set())
+              loadLeads()
+            }}
+          >
+            <SelectTrigger className="w-[160px] h-8 text-sm">
+              <SelectValue placeholder="Change stage..." />
+            </SelectTrigger>
+            <SelectContent>
+              {STAGES.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-1.5"
+            onClick={async () => {
+              if (!confirm(`Delete ${selectedLeadIds.size} lead(s)?`)) return
+              for (const id of Array.from(selectedLeadIds)) {
+                try {
+                  await api.leads.delete(id)
+                } catch (e) {
+                  console.error(`Failed to delete lead ${id}`, e)
+                }
+              }
+              setSelectedLeadIds(new Set())
+              loadLeads()
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+            Delete
+          </Button>
+          
+          <Button variant="ghost" size="sm" onClick={() => setSelectedLeadIds(new Set())}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+
       {selectedLead && (
         <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary">
-                    {selectedLead.contact?.first_name?.[0]}{selectedLead.contact?.last_name?.[0]}
-                  </span>
-                </div>
-                {selectedLead.contact?.first_name} {selectedLead.contact?.last_name}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="text-sm font-medium">{selectedLead.contact?.email || 'Not provided'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Phone</p>
-                  <p className="text-sm font-medium">{selectedLead.contact?.phone || 'Not provided'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Company</p>
-                  <p className="text-sm font-medium">{selectedLead.contact?.company_id ? `Company #${selectedLead.contact.company_id}` : 'Not provided'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Source</p>
-                  <Badge variant="outline">{selectedLead.source.replace('_', ' ')}</Badge>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-4 border-t">
-                <div className="flex items-center gap-4">
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Stage</p>
-                    <Badge className={stageColors[selectedLead.stage]}>
-                      {STAGES.find(s => s.value === selectedLead.stage)?.label}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Score</p>
-                    <p className="text-sm font-mono font-medium">{selectedLead.score}</p>
-                  </div>
-                </div>
-                {selectedLead.contact?.linkedin_url && (
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={selectedLead.contact.linkedin_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      LinkedIn
-                    </a>
-                  </Button>
+          <DialogContent className="fixed inset-y-0 right-0 w-[480px] max-w-full border-l border-border bg-bg-base shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right duration-200 p-0 flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <div className="flex items-center gap-3">
+                {selectedLead && (
+                  <>
+                    <div className="w-10 h-10 rounded-[var(--radius-md)] bg-accent/10 flex items-center justify-center">
+                      <span className="text-sm font-semibold text-accent">
+                        {selectedLead.contact?.first_name?.[0]}{selectedLead.contact?.last_name?.[0]}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold font-display">
+                        {selectedLead.contact?.first_name} {selectedLead.contact?.last_name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {STAGES.find(s => s.value === selectedLead.stage) && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${STAGES.find(s => s.value === selectedLead.stage)?.bgColor} ${STAGES.find(s => s.value === selectedLead.stage)?.color} border-0`}>
+                            {STAGES.find(s => s.value === selectedLead.stage)?.label}
+                          </span>
+                        )}
+                        <span className="text-xs text-text-muted font-mono">Score: {selectedLead.score}</span>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="w-8 h-8 rounded-[var(--radius-md)] bg-surface border border-border flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedLead(null)}>Close</Button>
-              <Button>Edit Lead</Button>
-            </DialogFooter>
+
+            <div className="flex border-b border-border">
+              {(['Overview', 'Activity', 'Notes'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    'flex-1 py-3 text-sm font-medium transition-colors border-b-2',
+                    activeTab === tab
+                      ? 'text-accent border-accent'
+                      : 'text-text-muted border-transparent hover:text-text-secondary'
+                  )}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {activeTab === 'Overview' && selectedLead && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs text-text-muted">Email</p>
+                      <p className="text-sm text-text-primary">{selectedLead.contact?.email || '—'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-text-muted">Phone</p>
+                      <p className="text-sm text-text-primary">{selectedLead.contact?.phone || '—'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-text-muted">Source</p>
+                      <p className="text-sm capitalize">{selectedLead.source.replace('_', ' ')}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-text-muted">Created</p>
+                      <p className="text-sm text-text-muted">
+                        {new Date(selectedLead.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {activeTab === 'Activity' && (
+                <div className="space-y-3">
+                  <p className="text-sm text-text-muted">No activity recorded yet.</p>
+                </div>
+              )}
+              {activeTab === 'Notes' && (
+                <div className="space-y-3">
+                  <textarea
+                    className="w-full h-32 rounded-[var(--radius-md)] border border-border bg-surface p-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none"
+                    placeholder="Add a note..."
+                  />
+                  <button className="px-4 py-2 rounded-[var(--radius-md)] bg-accent text-background text-sm font-medium hover:bg-accent-hover">
+                    Save Note
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-border flex gap-3">
+              <Button variant="outline" className="flex-1 gap-2" onClick={() => setSelectedLead(null)}>
+                <X className="h-4 w-4" />
+                Close
+              </Button>
+              <Button className="flex-1 gap-2">
+                <Mail className="h-4 w-4" />
+                Send Email
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       )}

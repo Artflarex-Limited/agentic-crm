@@ -24,9 +24,13 @@ from app.enums import (
     AgentRole,
     AgentStatus,
     DealStage,
+    InvoiceStatus,
     LeadSource,
     LeadStage,
-    InvoiceStatus,
+    ProcurementStatus,
+    QuoteStatus,
+    ShipmentStatus,
+    SupplierStatus,
 )
 
 __all__ = [
@@ -52,7 +56,11 @@ __all__ = [
     "AgentRole",
     "AgentStatus",
     "DealStage",
+    "InvoiceStatus",
     "LeadSource",
     "LeadStage",
-    "InvoiceStatus",
+    "ProcurementStatus",
+    "QuoteStatus",
+    "ShipmentStatus",
+    "SupplierStatus",
 ]

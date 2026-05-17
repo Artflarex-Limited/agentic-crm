@@ -1,55 +1,6 @@
 name: agentic-crm
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: agentic-crm-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: agentic_crm
-      POSTGRES_USER: agentic_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentic_secret_pass}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agentic_user -d agentic_crm"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-
-  redis:
-    image: redis:7-alpine
-    container_name: agentic-crm-redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 64M
-
   backend:
     build:
       context: ./backend
@@ -62,8 +13,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://agentic_user:${POSTGRES_PASSWORD:-agentic_secret_pass}@postgres:5432/agentic_crm
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: file:/app/data/agentic_crm.db
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -75,16 +25,12 @@ services:
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
     ports:
       - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./data:/app/data
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "/usr/local/bin/python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -97,79 +43,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-
-  celeryworker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        - BUILDKIT_INLINE_CACHE=1
-    image: agentic-crm-backend:${TAG:-latest}
-    container_name: agentic-crm-celery
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://agentic_user:${POSTGRES_PASSWORD:-agentic_secret_pass}@postgres:5432/agentic_crm
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
-      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      LINKEDIN_COOKIES: ${LINKEDIN_COOKIES:-}
-      APOLLO_API_KEY: ${APOLLO_API_KEY:-}
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./backend:/app
-    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A app.celery_app inspect ping || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-    profiles:
-      - worker
-
-  celerybeat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        - BUILDKIT_INLINE_CACHE=1
-    image: agentic-crm-backend:${TAG:-latest}
-    container_name: agentic-crm-celery-beat
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://agentic_user:${POSTGRES_PASSWORD:-agentic_secret_pass}@postgres:5432/agentic_crm
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./backend:/app
-    command: celery -A app.celery_app beat --loglevel=info
-    profiles:
-      - worker
 
   frontend:
     build:
@@ -231,12 +104,6 @@ services:
           memory: 64M
     profiles:
       - production
-
-volumes:
-  postgres_data:
-    name: agentic-crm-postgres-data
-  redis_data:
-    name: agentic-crm-redis-data
 
 networks:
   default:

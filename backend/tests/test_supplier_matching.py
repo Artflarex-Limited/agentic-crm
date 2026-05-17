@@ -1,22 +1,43 @@
 """
 Tests for AI Supplier Matching Service
 """
+from dataclasses import dataclass
+
 import pytest
 
-from app.models.models import Supplier, SupplierStatus
+from app.enums import SupplierStatus
+from app.prisma import prisma
 from app.services.supplier_matching_service import SupplierMatchingService, SupplierMatchResult
 
 
-class TestSupplierMatchingService:
-    @pytest.mark.asyncio
-    async def test_calculate_match_score_industry_exact(self, db_session):
+@dataclass
+class TestSupplier:
+    """Lightweight supplier stand-in for service unit tests (doesn't hit DB)."""
+    id: int
+    company_name: str
+    country: str
+    business_email: str
+    industry: str
+    status: str
+    exporting_to_eu: bool
+    certifications: list = None
+
+    def __post_init__(self):
+        self.certifications = self.certifications or []
+
+
+class TestCalculateMatchScore:
+    """Unit tests for _calculate_match_score — uses plain dataclass suppliers."""
+
+    def test_calculate_match_score_industry_exact(self):
         service = SupplierMatchingService()
-        supplier = Supplier(
+        supplier = TestSupplier(
+            id=1,
             company_name="Test Electronics GmbH",
             country="Germany",
             business_email="info@test-elec.de",
             industry="Electronics",
-            status=SupplierStatus.VERIFIED,
+            status=SupplierStatus.VERIFIED.value,
             exporting_to_eu=True,
             certifications=["CE", "ISO 9001"],
         )
@@ -32,15 +53,15 @@ class TestSupplierMatchingService:
         assert len(reasons) > 0
         assert any("Industry match" in r for r in reasons)
 
-    @pytest.mark.asyncio
-    async def test_calculate_match_score_with_certifications(self, db_session):
+    def test_calculate_match_score_with_certifications(self):
         service = SupplierMatchingService()
-        supplier = Supplier(
+        supplier = TestSupplier(
+            id=2,
             company_name="Test Machinery TR",
             country="Turkey",
             business_email="info@test-machinery.tr",
             industry="Machinery",
-            status=SupplierStatus.VERIFIED,
+            status=SupplierStatus.VERIFIED.value,
             exporting_to_eu=True,
             certifications=["CE", "ISO 9001", "ISO 14001"],
         )
@@ -55,24 +76,27 @@ class TestSupplierMatchingService:
         assert score > 0.5
         assert any("Certifications" in r for r in reasons)
 
-    @pytest.mark.asyncio
-    async def test_calculate_match_score_eu_export_bonus(self, db_session):
+    def test_calculate_match_score_eu_export_bonus(self):
         service = SupplierMatchingService()
-        supplier_eu = Supplier(
+        supplier_eu = TestSupplier(
+            id=3,
             company_name="EU Exporter",
             country="Germany",
             business_email="info@eu-export.de",
             industry="Electronics",
-            status=SupplierStatus.VERIFIED,
+            status=SupplierStatus.VERIFIED.value,
             exporting_to_eu=True,
+            certifications=[],
         )
-        supplier_non_eu = Supplier(
+        supplier_non_eu = TestSupplier(
+            id=4,
             company_name="Non EU Exporter",
             country="Turkey",
             business_email="info@non-eu-export.tr",
             industry="Electronics",
-            status=SupplierStatus.VERIFIED,
+            status=SupplierStatus.VERIFIED.value,
             exporting_to_eu=False,
+            certifications=[],
         )
 
         score_eu, _ = service._calculate_match_score(
@@ -90,15 +114,17 @@ class TestSupplierMatchingService:
 
         assert score_eu > score_non_eu
 
-    @pytest.mark.asyncio
-    async def test_calculate_match_score_no_match(self, db_session):
+    def test_calculate_match_score_no_match(self):
         service = SupplierMatchingService()
-        supplier = Supplier(
+        supplier = TestSupplier(
+            id=5,
             company_name="Food Company",
             country="Turkey",
             business_email="info@food-co.tr",
             industry="Food & Beverages",
-            status=SupplierStatus.VERIFIED,
+            status=SupplierStatus.VERIFIED.value,
+            exporting_to_eu=False,
+            certifications=[],
         )
 
         score, reasons = service._calculate_match_score(
@@ -132,39 +158,25 @@ class TestSupplierMatchResult:
         assert result.exporting_to_eu is True
 
 
-class TestSupplierMatchingServiceFindMatches:
-    @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Requires database setup - integration test")
-    async def test_find_matching_suppliers_filters_by_country(self, db_session):
-        pass
-
-    @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Requires database setup - integration test")
-    async def test_find_matching_suppliers_filters_by_eu_export(self, db_session):
-        pass
-
-    @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Requires database setup - integration test")
-    async def test_find_matching_suppliers_sorts_by_score(self, db_session):
-        pass
-
-
 class TestGetTopSuppliersForRfq:
-    @pytest.mark.asyncio
-    async def test_get_top_suppliers_returns_top_n(self, db_session):
-        service = SupplierMatchingService()
-        for i in range(15):
-            supplier = Supplier(
-                company_name=f"Supplier {i}",
-                country="Germany",
-                business_email=f"info@supplier{i}.de",
-                industry="Electronics",
-                status=SupplierStatus.VERIFIED,
-                exporting_to_eu=True,
-            )
-            db_session.add(supplier)
-        await db_session.commit()
+    """Integration tests that use actual Prisma suppliers."""
 
+    @pytest.mark.asyncio
+    async def test_get_top_suppliers_returns_top_n(self, session_prisma):
+        await prisma.supplier.delete_many(where={})
+        for i in range(15):
+            await prisma.supplier.create(
+                data={
+                    "company_name": f"Supplier {i}",
+                    "country": "Germany",
+                    "business_email": f"info@supplier{i}.de",
+                    "industry": "Electronics",
+                    "status": SupplierStatus.VERIFIED.value,
+                    "exporting_to_eu": True,
+                }
+            )
+
+        service = SupplierMatchingService()
         top_suppliers = await service.get_top_suppliers_for_rfq(
             rfq_industry="Electronics",
             rfq_countries=["Germany"],
@@ -173,9 +185,72 @@ class TestGetTopSuppliersForRfq:
 
         assert len(top_suppliers) <= 5
 
-
-class TestRecordMatchEvent:
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Requires database setup - integration test")
-    async def test_record_match_event_creates_audit_log(self, db_session):
-        pass
+    async def test_find_matching_suppliers_filters_by_country(self, session_prisma):
+        await prisma.supplier.delete_many(where={})
+        await prisma.supplier.create(
+            data={
+                "company_name": "German Supplier",
+                "country": "Germany",
+                "business_email": "info@german.de",
+                "industry": "Electronics",
+                "status": SupplierStatus.VERIFIED.value,
+                "exporting_to_eu": True,
+            }
+        )
+        await prisma.supplier.create(
+            data={
+                "company_name": "Turkish Supplier",
+                "country": "Turkey",
+                "business_email": "info@turkish.tr",
+                "industry": "Electronics",
+                "status": SupplierStatus.VERIFIED.value,
+                "exporting_to_eu": False,
+            }
+        )
+
+        service = SupplierMatchingService()
+        top_suppliers = await service.get_top_suppliers_for_rfq(
+            rfq_industry="Electronics",
+            rfq_countries=["Germany"],
+            top_n=5,
+        )
+
+        assert all(s.country == "Germany" for s in top_suppliers)
+
+    @pytest.mark.asyncio
+    async def test_find_matching_suppliers_sorts_by_score(self, session_prisma):
+        await prisma.supplier.delete_many(where={})
+        await prisma.supplier.create(
+            data={
+                "company_name": "Low Score Supplier",
+                "country": "Germany",
+                "business_email": "info@low.de",
+                "industry": "Food",
+                "status": SupplierStatus.VERIFIED.value,
+                "exporting_to_eu": True,
+            }
+        )
+        await prisma.supplier.create(
+            data={
+                "company_name": "High Score Supplier",
+                "country": "Germany",
+                "business_email": "info@high.de",
+                "industry": "Electronics",
+                "status": SupplierStatus.VERIFIED.value,
+                "exporting_to_eu": True,
+                "certifications": "CE,ISO 9001",
+            }
+        )
+
+        service = SupplierMatchingService()
+        top_suppliers = await service.get_top_suppliers_for_rfq(
+            rfq_industry="Electronics",
+            rfq_countries=["Germany"],
+            top_n=5,
+        )
+
+        assert len(top_suppliers) >= 1
+        # High score supplier should appear before low score
+        names = [s.company_name for s in top_suppliers]
+        assert "High Score Supplier" in names

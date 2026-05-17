@@ -3,7 +3,7 @@ Pydantic schema validation tests
 """
 from datetime import datetime, timedelta
 
-from app.models.models import ActivityType, AgentRole, AgentStatus, DealStage, LeadSource, LeadStage
+from app.enums import ActivityType, AgentRole, AgentStatus, DealStage, LeadSource, LeadStage
 from app.schemas.schemas import (
     ActivityCreate,
     AgentCreate,
@@ -44,7 +44,7 @@ def test_contact_create_valid():
     assert contact.email == "jane@doe.com"
 
 
-def test_contact_create_email_format(db_session):
+def test_contact_create_email_format():
     contact = ContactCreate(
         first_name="Jane",
         last_name="Doe",
