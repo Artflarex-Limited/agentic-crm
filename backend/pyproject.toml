@@ -48,10 +48,21 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = ["app/generated/**"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
-ignore = ["E501", "B008", "UP", "SIM"]  # UP/SIM excluded: app/generated is auto-generated Prisma client
+ignore = [
+    "E501",   # line too long
+    "E402",   # module level import not at top (generated files)
+    "B008",   # do not perform calls in argument defaults
+    "B904",   # raise from err in except
+    "UP",     # pyupgrade (auto-generated code)
+    "SIM",    # simplify (auto-generated code)
+    "W293",   # blank line contains whitespace
+    "W292",   # no newline at end of file
+    "I001",   # import block unsorted
+]
 
 [tool.mypy]
 python_version = "3.12"

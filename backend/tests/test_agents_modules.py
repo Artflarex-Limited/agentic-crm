@@ -20,18 +20,32 @@ from app.agents.context import AgentContext, generate_correlation_id, generate_r
 from app.models.models import AgentRole, DealStage, LeadStage
 
 
+def _auto_mock(obj, name):
+    """Auto-create nested MagicMock on demand."""
+    if not hasattr(obj, name):
+        setattr(obj, name, MagicMock())
+    return getattr(obj, name)
+
+
 @pytest.fixture
 def mock_prisma():
     with patch("app.prisma.prisma") as mock:
         mock.is_connected = True
+        # Auto-create nested models so tests don't AttributeError
+        for model in ("sequenceenrollment", "sequence", "lead", "contact",
+                      "activity", "auditlog", "company", "agent", "user"):
+            _auto_mock(mock, model)
         yield mock
 
 
 @pytest.fixture
 def mock_email_service():
     with patch("app.agents.email_outreach.email_service") as mock:
-        mock.send_email = AsyncMock(return_value=True)
-        yield mock
+        instance = mock.return_value
+        instance.send_email = AsyncMock(return_value=True)
+        instance.send_templated_email = AsyncMock(return_value=True)
+        instance.get_sent_emails = AsyncMock(return_value=[])
+        yield instance
 
 
 class TestEmailOutreach:

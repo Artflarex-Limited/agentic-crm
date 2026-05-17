@@ -13,7 +13,18 @@ sys.modules['app.prisma'].prisma = MagicMock()
 
 
 class MockPrisma:
+    """Minimal mock of prisma client - auto-creates nested models on access."""
     is_connected = True
+
+    def __getattr__(self, name):
+        # Auto-create nested mock models (e.g., .sequenceenrollment, .lead)
+        nested = MagicMock()
+        setattr(self, name, nested)
+        return nested
+
+    def __getitem__(self, name):
+        # Support bracket access for dict-like models (if needed)
+        return self.__getattr__(name)
 
 
 @pytest.fixture
