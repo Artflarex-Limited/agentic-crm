@@ -1,4 +1,81 @@
+import { jwtVerify, JWTVerifyOptions } from 'jose'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXT_PUBLIC_JWT_SECRET || ''
+
+const AUTH_TOKEN_KEY = 'openclaw_auth_token'
+const FALLBACK_AUTH_TOKEN_KEYS = ['auth_token', 'jwt_token', 'token']
+
+export interface JWTPayload {
+  sub?: string
+  exp?: number
+  iat?: number
+  email?: string
+  name?: string
+  role?: string
+  [key: string]: unknown
+}
+
+async function verifyJWT(token: string): Promise<JWTPayload | null> {
+  if (!JWT_SECRET) {
+    console.warn('JWT_SECRET not configured - token verification skipped')
+    return null
+  }
+  try {
+    const secret = new TextEncoder().encode(JWT_SECRET)
+    const options: JWTVerifyOptions = {
+      algorithms: ['HS256'],
+    }
+    const { payload } = await jwtVerify(token, secret, options)
+    return payload as JWTPayload
+  } catch (err) {
+    console.warn('JWT verification failed:', err)
+    return null
+  }
+}
+
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    for (const key of [AUTH_TOKEN_KEY, ...FALLBACK_AUTH_TOKEN_KEYS]) {
+      const token = localStorage.getItem(key)
+      if (token) return token
+    }
+  } catch {
+    // localStorage not available (private browsing, etc.)
+  }
+  return null
+}
+
+export async function getVerifiedUser(): Promise<JWTPayload | null> {
+  const token = getAuthToken()
+  if (!token) return null
+  return verifyJWT(token)
+}
+
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = getAuthToken()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string> || {}),
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+  })
+  if (res.status === 401) {
+    if (typeof window !== 'undefined') {
+      for (const key of [AUTH_TOKEN_KEY, ...FALLBACK_AUTH_TOKEN_KEYS]) {
+        localStorage.removeItem(key)
+      }
+    }
+  }
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
 
 export type AgentRole = 'lead_sourcing' | 'research' | 'outreach' | 'follow_up' | 'qualification' | 'reporting'
 export type AgentStatus = 'active' | 'paused' | 'stopped'
@@ -6,6 +83,18 @@ export type LeadSource = 'linkedin' | 'email' | 'web' | 'phone' | 'cold_outreach
 export type LeadStage = 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost'
 export type DealStage = 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost'
 export type ActivityType = 'email_sent' | 'email_opened' | 'email_replied' | 'linkedin_message' | 'linkedin_connection' | 'call_made' | 'call_received' | 'note_added' | 'meeting_scheduled' | 'stage_changed' | 'agent_action'
+
+export interface Company {
+  id: number
+  name: string
+  domain?: string
+  industry?: string
+  size?: string
+  linkedin_url?: string
+  extra_data: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
 
 export interface Contact {
   id: number
@@ -15,18 +104,6 @@ export interface Contact {
   email?: string
   phone?: string
   title?: string
-  linkedin_url?: string
-  extra_data: Record<string, unknown>
-  created_at: string
-  updated_at: string
-}
-
-export interface Company {
-  id: number
-  name: string
-  domain?: string
-  industry?: string
-  size?: string
   linkedin_url?: string
   extra_data: Record<string, unknown>
   created_at: string
@@ -201,19 +278,11 @@ export interface MarketIntelligenceResponse {
   cache_ttl_seconds: number
 }
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  })
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  return res.json()
-}
-
 export const api = {
+  auth: {
+    getVerifiedUser,
+    getToken: getAuthToken,
+  },
   dashboard: {
     stats: () => fetchApi<{ total_leads: number; total_contacts: number; total_deals: number; open_deals_value: number; leads_by_stage: Record<string, number>; deals_by_stage: Record<string, number>; recent_activities: Activity[] }>('/api/dashboard/stats'),
     pipeline: () => fetchApi<{ items: PipelineItem[] }>('/api/dashboard/pipeline'),
