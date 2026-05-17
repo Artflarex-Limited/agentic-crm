@@ -1,45 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agentic-crm-celery-beat
-  namespace: default
+  name: celery-beat
   labels:
-    app: celery-beat
+    app: agentic-crm
+    component: celery-beat
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: celery-beat
+      app: agentic-crm
+      component: celery-beat
   template:
     metadata:
       labels:
-        app: celery-beat
+        app: agentic-crm
+        component: celery-beat
     spec:
       containers:
-        - name: celerybeat
+        - name: celery-beat
           image: agentic-crm-backend:latest
-          command: ["celery", "-A", "app.celery_app", "beat", "--loglevel=info"]
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: agentic-crm-secret
-                  key: DATABASE_URL
-            - name: REDIS_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: agentic-crm-config
-                  key: REDIS_URL
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: agentic-crm-secret
-                  key: SECRET_KEY
+          command: ["celery", "-A", "app.celery_app", "beat", "--loglevel=info", "--scheduler", "celery.schedulers.DatabaseScheduler"]
+          envFrom:
+            - configMapRef:
+                name: agentic-crm-config
+            - secretRef:
+                name: agentic-crm-secrets
           resources:
-            limits:
-              cpu: "1"
-              memory: 512Mi
             requests:
               cpu: 100m
-              memory: 128Mi
-      restartPolicy: Always
+              memory: 128M
+            limits:
+              cpu: 500m
+              memory: 512M

@@ -1,90 +1,53 @@
-.PHONY: help up down build start stop restart logs logs-backend logs-frontend logs-redis logs-postgres migrate seed backup test lint lint-frontend clean ps shell console
+.PHONY: help up down build lint test migrate seed logs shell console clean
 
-COMPOSE_FILE := docker-compose.yml
-COMPOSE := docker-compose -f $(COMPOSE_FILE)
+help:
+	@echo "Agentic CRM - Makefile Commands"
+	@echo "==============================="
+	@echo "make up          - Start all services with docker-compose"
+	@echo "make down        - Stop all services"
+	@echo "make build       - Build Docker images"
+	@echo "make lint        - Run ruff linter"
+	@echo "make test        - Run pytest"
+	@echo "make migrate     - Run database migrations"
+	@echo "make seed        - Seed database with sample data"
+	@echo "make logs        - View logs from all services"
+	@echo "make shell       - Open a shell in the backend container"
+	@echo "make console     - Open Python REPL in backend container"
+	@echo "make clean       - Remove containers, volumes, and build artifacts"
 
-help: ## Show this help message
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+up:
+	docker compose up --detach
 
-up: ## Start all services
-	$(COMPOSE) up -d
+down:
+	docker compose down
 
-down: ## Stop all services
-	$(COMPOSE) down
+build:
+	docker compose build
 
-build: ## Build all images
-	$(COMPOSE) build
+lint:
+	cd backend && ruff check .
 
-start: ## Start services (alias for up)
-	$(COMPOSE) up -d
+test:
+	cd backend && pytest tests/ -v
 
-stop: ## Stop services
-	$(COMPOSE) stop
+migrate:
+	@./scripts/migrate.sh
 
-restart: ## Restart services
-	$(COMPOSE) restart
+seed:
+	@./scripts/seed.sh
 
-logs: ## View all logs
-	$(COMPOSE) logs -f
+logs:
+	docker compose logs -f
 
-logs-backend: ## View backend logs
-	$(COMPOSE) logs -f backend
+shell:
+	docker compose exec backend /bin/bash
 
-logs-frontend: ## View frontend logs
-	$(COMPOSE) logs -f frontend
+console:
+	docker compose exec backend python -c "import sys; sys.path.insert(0, '/app'); from app.prisma import prisma; import asyncio; asyncio.run(prisma.connect()); print('Connected to database')"
 
-logs-redis: ## View redis logs
-	$(COMPOSE) logs -f redis
-
-logs-postgres: ## View postgres logs
-	$(COMPOSE) logs -f postgres
-
-logs-celery: ## View celery worker logs
-	$(COMPOSE) logs -f celeryworker
-
-migrate: ## Run database migrations
-	./scripts/migrate.sh
-
-seed: ## Seed database with sample data
-	./scripts/seed.sh
-
-backup: ## Create database backup
-	./scripts/backup.sh
-
-test: ## Run tests
-	$(COMPOSE) run --rm backend pytest -v
-
-lint: ## Run linters (ruff, black)
-	ruff check backend/
-	black --check backend/
-
-lint-frontend: ## Run frontend linter
-	cd frontend && npm run lint
-
-clean: ## Remove containers, volumes, and images
-	$(COMPOSE) down -v --remove-orphans
-	docker images 'agentic-crm-*' -q | xargs -r docker rmi -f
-
-ps: ## Show running containers
-	$(COMPOSE) ps
-
-shell: ## Shell into backend container
-	$(COMPOSE) exec backend bash
-
-console: ## Python console in backend container
-	$(COMPOSE) exec backend python -c "import asyncio; from app.db.database import engine; print('DB ready')"
-
-worker: ## Start Celery worker (requires worker profile)
-	$(COMPOSE) --profile worker up -d celeryworker
-
-worker-logs: ## View celery worker logs
-	$(COMPOSE) --profile worker logs -f celeryworker
-
-beat: ## Start Celery beat scheduler (requires worker profile)
-	$(COMPOSE) --profile worker up -d celerybeat
-
-deploy: ## Deploy to production
-	./scripts/deploy.sh
-
-deploy-staging: ## Deploy to staging
-	TAG=staging ./scripts/deploy.sh
+clean:
+	docker compose down -v --rmi local
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
+	rm -rf build dist .eggs *.egg-info

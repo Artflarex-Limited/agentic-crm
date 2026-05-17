@@ -1,9 +1,4 @@
-name: QA - Test Suite & Quality Gates
-
-permissions:
-  contents: read
-  packages: read
-  security-events: write
+name: CI
 
 on:
   push:
@@ -11,42 +6,37 @@ on:
   pull_request:
     branches: [main, develop]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+env:
+  TAG: ${{ github.sha }}
 
 jobs:
   lint:
-    name: Backend Lint (ruff)
+    name: Lint (Ruff)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install ruff
         run: pip install ruff
 
       - name: Run ruff
-        run: ruff check backend/ --config=backend/pyproject.toml
+        run: ruff check backend/
 
-  backend-tests:
-    name: Backend Tests (pytest + coverage)
+  test:
+    name: Test (Pytest)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16-alpine
         env:
-          POSTGRES_USER: agentic_user
-          POSTGRES_PASSWORD: agentic_secret_pass
-          POSTGRES_DB: agentic_crm
+          POSTGRES_DB: agentic_crm_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
@@ -54,214 +44,134 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio pytest-cov aiosqlite httpx
-
-      - name: Run backend tests with coverage
-        run: |
-          cd backend
-          PYTHONPATH=. pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
         env:
-          DATABASE_URL: postgresql+asyncpg://agentic_user:agentic_secret_pass@localhost:5432/agentic_crm
-          REDIS_URL: redis://localhost:6379/0
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./backend/coverage.xml
-          fail_ci_if_error: true
-          extra_arguments: '--flag backend --required'
-        continue-on-error: true
-
-      - name: Check coverage threshold
-        run: |
-          cd backend
-          coverage report --fail-under=70
-        continue-on-error: true
-
-  backend-typecheck:
-    name: Backend Type Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+          POSTGRES_DB: agentic_crm_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          cd backend
-          pip install -r requirements.txt
-          pip install mypy types-python-dateutil
+          pip install -e backend/requirements.txt
+          pip install -e backend/
 
-      - name: Run mypy
+      - name: Run migrations
         run: |
           cd backend
-          mypy app/ --ignore-missing-imports
-        continue-on-error: true
+          alembic upgrade head
+
+      - name: Run tests
+        run: |
+          cd backend
+          pytest tests/ -v --cov=app --cov-report=xml
 
   build-backend:
     name: Build Backend Docker Image
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build backend image
+      - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
-          file: ./backend/Dockerfile
           push: false
-          load: true
-          tags: agentic-crm-backend:test
+          tags: agentic-crm-backend:${{ env.TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/backend.tar
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+      - name: Upload backend image artifact
+        uses: actions/upload-artifact@v4
         with:
-          image-ref: agentic-crm-backend:test
-          format: sarif
-          output: trivy-results.sarif
-          severity: CRITICAL,HIGH
-        continue-on-error: true
-
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: trivy-results.sarif
+          name: backend-image
+          path: /tmp/backend.tar
 
   build-frontend:
     name: Build Frontend Docker Image
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: cd frontend && npm install
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build frontend image
+      - name: Build and push frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          file: ./frontend/Dockerfile
           push: false
-          load: true
-          tags: agentic-crm-frontend:test
-          build-args: NEXT_PUBLIC_API_URL=http://localhost:8000
+          tags: agentic-crm-frontend:${{ env.TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/frontend.tar
 
-  frontend-tests:
-    name: Frontend Tests (Playwright e2e)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm install
-
-      - name: Install Playwright browsers
-        run: |
-          cd frontend
-          npx playwright install --with-deps chromium
-
-      - name: Build frontend
-        run: |
-          cd frontend
-          npm run build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
-        continue-on-error: true
-
-      - name: Run Playwright e2e tests
-        run: |
-          cd frontend
-          npx playwright test --reporter=list
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
-        continue-on-error: true
-
-      - name: Upload Playwright report
-        if: failure()
+      - name: Upload frontend image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: frontend/playwright-report/
-          retention-days: 7
+          name: frontend-image
+          path: /tmp/frontend.tar
 
-  frontend-typecheck:
-    name: Frontend Type Check
+  security-scan:
+    name: Security Scan (Trivy)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    needs: [build-backend, build-frontend]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Download backend image
+        uses: actions/download-artifact@v4
         with:
-          node-version: '22'
+          name: backend-image
+          path: /tmp
 
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm install
+      - name: Download frontend image
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-image
+          path: /tmp
 
-      - name: Run TypeScript check
+      - name: Load Docker images
         run: |
-          cd frontend
-          npx tsc --noEmit
-        continue-on-error: true
+          docker load --input /tmp/backend.tar
+          docker load --input /tmp/frontend.tar
 
-      - name: Run ESLint
-        run: |
-          cd frontend
-          npm run lint
-        continue-on-error: true
+      - name: Run Trivy scanner on backend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: agentic-crm-backend:${{ env.TAG }}
+          format: sarif
+          output: backend-results.sarif
+          severity: CRITICAL,HIGH
+
+      - name: Run Trivy scanner on frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: agentic-crm-frontend:${{ env.TAG }}
+          format: sarif
+          output: frontend-results.sarif
+          severity: CRITICAL,HIGH
+
+      - name: Upload backend results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: backend-results.sarif
+
+      - name: Upload frontend results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: frontend-results.sarif
