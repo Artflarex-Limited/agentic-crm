@@ -10,15 +10,12 @@ Matches buyer RFQ requirements to verified suppliers using:
 
 Used by the AI agents to score and rank suppliers for RFQ responses.
 """
+import json
 import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from sqlalchemy import select, and_, or_
-from sqlalchemy.orm import selectinload
-
-from app.db.database import get_async_session_local
-from app.models.models import Supplier, SupplierStatus
+from app.prisma import prisma
 
 logger = logging.getLogger(__name__)
 
@@ -63,55 +60,61 @@ class SupplierMatchingService:
         Returns:
             List of SupplierMatchResult sorted by match_score descending
         """
-        SessionLocal = get_async_session_local()
-        if SessionLocal is None:
-            logger.error("Database not configured")
-            return []
+        try:
+            await prisma.$connect()
+        except Exception:
+            pass
 
-        async with SessionLocal() as db:
-            query = select(Supplier).where(Supplier.status == SupplierStatus.VERIFIED)
+        where: dict = {}
+        if country_filter:
+            where["country"] = {"contains": country_filter}
+        if must_export_to_eu:
+            where["exporting_to_eu"] = True
+        # Filter by VERIFIED status using raw query since status is an enum
+        # We use a list to filter where status equals VERIFIED string value
 
-            if country_filter:
-                query = query.where(Supplier.country.ilike(f"%{country_filter}%"))
+        all_suppliers = await prisma.supplier.find_many(
+            where=where,
+        )
 
-            if must_export_to_eu:
-                query = query.where(Supplier.exporting_to_eu == True)
+        # Filter by status == VERIFIED
+        verified_suppliers = [
+            s for s in all_suppliers
+            if (hasattr(s.status, 'value') and s.status.value == "VERIFIED") or str(s.status) == "VERIFIED"
+        ]
 
-            result = await db.execute(query)
-            suppliers = result.scalars().all()
-
-            matches = []
-            for supplier in suppliers:
-                score, reasons = self._calculate_match_score(
-                    supplier=supplier,
-                    required_industry=required_industry,
-                    required_categories=required_categories or [],
-                    required_certifications=required_certifications or [],
-                )
-
-                if score >= min_score:
-                    matches.append(SupplierMatchResult(
-                        supplier_id=supplier.id,
-                        company_name=supplier.company_name,
-                        country=supplier.country,
-                        industry=supplier.industry,
-                        match_score=score,
-                        match_reasons=reasons,
-                        certifications=supplier.certifications or [],
-                        production_capacity=supplier.production_capacity,
-                        exporting_to_eu=supplier.exporting_to_eu,
-                    ))
-
-            matches.sort(key=lambda x: x.match_score, reverse=True)
-            logger.info(
-                f"Found {len(matches)} matching suppliers for industry='{required_industry}'",
-                extra={"industry": required_industry, "country_filter": country_filter}
+        matches = []
+        for supplier in verified_suppliers:
+            score, reasons = self._calculate_match_score(
+                supplier=supplier,
+                required_industry=required_industry,
+                required_categories=required_categories or [],
+                required_certifications=required_certifications or [],
             )
-            return matches
+
+            if score >= min_score:
+                certs = supplier.certifications if isinstance(supplier.certifications, list) else []
+                matches.append(SupplierMatchResult(
+                    supplier_id=supplier.id,
+                    company_name=supplier.company_name,
+                    country=supplier.country,
+                    industry=supplier.industry,
+                    match_score=score,
+                    match_reasons=reasons,
+                    certifications=certs,
+                    production_capacity=supplier.production_capacity,
+                    exporting_to_eu=supplier.exporting_to_eu,
+                ))
+
+        matches.sort(key=lambda x: x.match_score, reverse=True)
+        logger.info(
+            f"Found {len(matches)} matching suppliers for industry='{required_industry}'",
+        )
+        return matches
 
     def _calculate_match_score(
         self,
-        supplier: Supplier,
+        supplier,
         required_industry: str,
         required_categories: list[str],
         required_certifications: list[str],
@@ -156,11 +159,11 @@ class SupplierMatchingService:
                 score += cat_score
                 reasons.append(f"Category match: {category_matches}/{len(required_categories)} categories")
 
-        if required_certifications:
-            supplier_certs = [c.upper() for c in (supplier.certifications or [])]
+        certs = supplier.certifications if isinstance(supplier.certifications, list) else []
+        if required_certifications and certs:
             cert_matches = [
                 cert for cert in required_certifications
-                if any(cert.upper() in sc or sc in cert.upper() for sc in supplier_certs)
+                if any(cert.upper() in c.upper() or c.upper() in cert.upper() for c in certs)
             ]
             if cert_matches:
                 cert_score = min(len(cert_matches) / len(required_certifications), 1.0) * cert_weight
@@ -227,49 +230,41 @@ class SupplierMatchingService:
             match_score: Calculated match score
             event_type: Type of match event
         """
-        SessionLocal = get_async_session_local()
-        if SessionLocal is None:
-            logger.error("Database not configured")
+        supplier = await prisma.supplier.find_unique(where={"id": supplier_id})
+        if not supplier:
+            logger.warning(f"Supplier not found: {supplier_id}")
             return
 
-        async with SessionLocal() as db:
-            from app.models.models import Activity, ActivityType, AuditLog
+        extra_data = supplier.extra_data or {} if isinstance(supplier.extra_data, dict) else {}
 
-            supplier_result = await db.execute(
-                select(Supplier).where(Supplier.id == supplier_id)
-            )
-            supplier = supplier_result.scalar_one_or_none()
-            if not supplier:
-                logger.warning(f"Supplier not found: {supplier_id}")
-                return
+        match_history = extra_data.get("match_history", [])
+        match_history.append({
+            "rfq_industry": rfq_industry,
+            "match_score": match_score,
+            "event_type": event_type,
+        })
+        extra_data["match_history"] = match_history[-50:]
 
-            if supplier.extra_data is None:
-                supplier.extra_data = {}
+        await prisma.supplier.update(
+            where={"id": supplier_id},
+            data={"extra_data": json.dumps(extra_data)},
+        )
 
-            match_history = supplier.extra_data.get("match_history", [])
-            match_history.append({
-                "rfq_industry": rfq_industry,
-                "match_score": match_score,
-                "event_type": event_type,
-            })
-            supplier.extra_data["match_history"] = match_history[-50:]
-
-            audit = AuditLog(
-                action="supplier_matched",
-                entity_type="supplier",
-                entity_id=supplier_id,
-                details={
+        await prisma.auditlog.create(
+            data={
+                "action": "supplier_matched",
+                "entity_type": "supplier",
+                "entity_id": supplier_id,
+                "details": json.dumps({
                     "rfq_industry": rfq_industry,
                     "match_score": match_score,
                     "event_type": event_type,
-                },
-            )
-            db.add(audit)
-            await db.commit()
-            logger.info(
-                f"Recorded match event for supplier {supplier_id}",
-                extra={"rfq_industry": rfq_industry, "match_score": match_score}
-            )
+                }),
+            }
+        )
+        logger.info(
+            f"Recorded match event for supplier {supplier_id}",
+        )
 
 
 async def get_supplier_matching_service() -> SupplierMatchingService:
