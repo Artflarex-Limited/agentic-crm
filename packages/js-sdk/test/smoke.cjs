@@ -1,0 +1,12 @@
+const { AgenticCRM, LeadsClient, sdk } = require('../dist/cjs/index.js')
+
+console.log('SDK loaded successfully')
+console.log('- AgenticCRM:', typeof AgenticCRM)
+console.log('- LeadsClient:', typeof LeadsClient)
+console.log('- sdk.leads:', typeof sdk?.leads)
+console.log('- sdk.contacts:', typeof sdk?.contacts)
+console.log('- sdk.deals:', typeof sdk?.deals)
+console.log('- sdk.agents:', typeof sdk?.agents)
+console.log('- sdk.activities:', typeof sdk?.activities)
+console.log('- sdk.sequences:', typeof sdk?.sequences)
+console.log('OK')
