@@ -1,342 +1,337 @@
 """
 Email Outreach Agent
 Sends email sequences, handles bounces, tracks opens/replies.
+
+Refactored from Celery tasks to plain async functions using Prisma.
+BackgroundTasks in the API layer calls these directly.
 """
+import json
 import logging
-import sys
 from datetime import datetime
 
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
-
-from app.agents._async import run_async
 from app.agents.context import AgentContext, get_current_correlation_id, get_current_run_id
-from app.celery_app import celery_app
-from app.db.database import get_async_session_local
-from app.models.models import (
-    Activity,
-    ActivityType,
-    AgentRole,
-    AuditLog,
-    Lead,
-    Sequence,
-    SequenceEnrollment,
-)
+from app.prisma import prisma
 from app.services.email_service import EmailService
 
 logger = logging.getLogger(__name__)
 email_service = EmailService()
 
 
-@celery_app.task(
-    name="agents.email_outreach.send_sequence",
-    bind=True,
-    max_retries=3,
-    default_retry_delay=60,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=600,
-)
-def send_sequence(self, lead_id: int, sequence_id: int, correlation_id: str | None = None):
+async def send_sequence(lead_id: int, sequence_id: int, correlation_id: str | None = None):
     """
     Process next step in an email sequence for a lead.
     Sends email, logs activity, advances step.
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    AgentContext(role=AgentRole.OUTREACH)
+    AgentContext(role="outreach")
 
     logger.info(
         f"Starting email sequence: lead_id={lead_id}, sequence_id={sequence_id}",
-        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+        extra={"run_id": run_id, "correlation_id": corr_id}
     )
 
-    async def _send_sequence():
-        SessionLocal = get_async_session_local()
-        if SessionLocal is None:
-            logger.error("Database not configured", extra={"run_id": run_id})
-            return {"status": "error", "message": "Database not configured"}
+    if not prisma.is_connected:
+        logger.error("Database not configured", extra={"run_id": run_id})
+        return {"status": "error", "message": "Database not configured"}
 
-        async with SessionLocal() as db:
-            enrollment = await db.execute(
-                select(SequenceEnrollment)
-                .where(SequenceEnrollment.lead_id == lead_id)
-                .where(SequenceEnrollment.sequence_id == sequence_id)
-                .options(selectinload(SequenceEnrollment.lead).selectinload(Lead.contact))
-            )
-            enrollment = enrollment.scalar_one_or_none()
-            if not enrollment:
-                logger.warning(
-                    f"No enrollment found for lead {lead_id}, sequence {sequence_id}",
-                    extra={"run_id": run_id}
-                )
-                return {"status": "error", "message": "Enrollment not found"}
+    # Fetch enrollment with lead + contact loaded
+    enrollment = await prisma.sequenceenrollment.find_first(
+        where={
+            "lead_id": lead_id,
+            "sequence_id": sequence_id,
+        },
+        include={
+            "lead": {
+                "include": {
+                    "contact": True,
+                }
+            },
+        },
+    )
+    if not enrollment:
+        logger.warning(
+            f"No enrollment found for lead {lead_id}, sequence {sequence_id}",
+            extra={"run_id": run_id}
+        )
+        return {"status": "error", "message": "Enrollment not found"}
 
-            if enrollment.status != "active":
-                return {"status": "skipped", "reason": "Enrollment not active"}
+    if enrollment.status != "active":
+        return {"status": "skipped", "reason": "Enrollment not active"}
 
-            sequence = await db.execute(
-                select(Sequence).where(Sequence.id == sequence_id)
-            )
-            sequence = sequence.scalar_one_or_none()
-            if not sequence or not sequence.steps:
-                return {"status": "error", "message": "Sequence not found or empty"}
+    # Fetch sequence
+    sequence = await prisma.sequence.find_unique(
+        where={"id": sequence_id},
+    )
+    if not sequence or not sequence.steps:
+        return {"status": "error", "message": "Sequence not found or empty"}
 
-            current_step = enrollment.current_step
-            if current_step >= len(sequence.steps):
-                enrollment.status = "completed"
-                enrollment.completed_at = datetime.utcnow()
-                await db.commit()
-                logger.info(
-                    f"Sequence completed for lead {lead_id}",
-                    extra={"run_id": run_id, "lead_id": lead_id}
-                )
-                return {"status": "completed", "message": "All steps completed"}
+    steps = json.loads(sequence.steps) if isinstance(sequence.steps, str) else sequence.steps
+    current_step = enrollment.currentStep
 
-            step = sequence.steps[current_step]
-            if step.get("type") != "email":
-                enrollment.current_step = current_step + 1
-                await db.commit()
-                return {"status": "skipped", "reason": "Step is not email type"}
+    if current_step >= len(steps):
+        await prisma.sequenceenrollment.update(
+            where={"id": enrollment.id},
+            data={
+                "status": "completed",
+                "completedAt": datetime.utcnow(),
+            },
+        )
+        logger.info(
+            f"Sequence completed for lead {lead_id}",
+            extra={"run_id": run_id, "lead_id": lead_id}
+        )
+        return {"status": "completed", "message": "All steps completed"}
 
-            lead = enrollment.lead
-            contact = lead.contact
-            if not contact or not contact.email:
-                return {"status": "error", "message": "Contact has no email"}
+    step = steps[current_step]
+    if step.get("type") != "email":
+        await prisma.sequenceenrollment.update(
+            where={"id": enrollment.id},
+            data={"currentStep": current_step + 1},
+        )
+        return {"status": "skipped", "reason": "Step is not email type"}
 
-            sent = await email_service.send_email(
-                to_email=contact.email,
-                subject=step.get("subject", f"Follow-up from {lead.id}"),
-                body=step.get("content", ""),
-            )
+    lead = enrollment.lead
+    contact = lead.contact
+    if not contact or not contact.email:
+        return {"status": "error", "message": "Contact has no email"}
 
-            if sent:
-                enrollment.last_sent_at = datetime.utcnow()
-                enrollment.current_step = current_step + 1
+    sent = await email_service.send_email(
+        to_email=contact.email,
+        subject=step.get("subject", f"Follow-up from {lead.id}"),
+        body=step.get("content", ""),
+    )
 
-                activity = Activity(
-                    lead_id=lead_id,
-                    contact_id=contact.id,
-                    type=ActivityType.EMAIL_SENT,
-                    content=step.get("content", "")[:500],
-                    activity_meta={
-                        "sequence_id": sequence_id,
-                        "step": current_step,
-                        "subject": step.get("subject"),
-                        "run_id": run_id,
-                        "correlation_id": corr_id,
-                        "message_id": f"seq-{sequence_id}-step-{current_step}-{lead_id}",
-                    },
-                )
-                db.add(activity)
+    if sent:
+        message_id = f"seq-{sequence_id}-step-{current_step}-{lead_id}"
 
-                audit = AuditLog(
-                    action="email_sent",
-                    entity_type="lead",
-                    entity_id=lead_id,
-                    details={
-                        "contact_email": contact.email,
-                        "sequence_id": sequence_id,
-                        "step": current_step,
-                        "run_id": run_id,
-                        "correlation_id": corr_id,
-                    },
-                )
-                db.add(audit)
-                await db.commit()
-                logger.info(
-                    f"Email sent: lead_id={lead_id}, step={current_step}",
-                    extra={"run_id": run_id, "lead_id": lead_id, "step": current_step}
-                )
-                return {"status": "sent", "lead_id": lead_id, "step": current_step}
-            else:
-                logger.warning(
-                    f"Email send failed for lead {lead_id}, scheduling retry",
-                    extra={"run_id": run_id, "lead_id": lead_id}
-                )
-                try:
-                    raise Exception("Email send failed")
-                except Exception:
-                    self.retry(countdown=60, exc=sys.exc_info())
+        # Update enrollment
+        await prisma.sequenceenrollment.update(
+            where={"id": enrollment.id},
+            data={
+                "lastSentAt": datetime.utcnow(),
+                "currentStep": current_step + 1,
+            },
+        )
 
-    return run_async(_send_sequence())
+        # Create activity
+        await prisma.activity.create(
+            data={
+                "lead_id": lead_id,
+                "contact_id": contact.id,
+                "type": "email_sent",
+                "content": (step.get("content", "") or "")[:500],
+                "activityMeta": json.dumps({
+                    "sequence_id": sequence_id,
+                    "step": current_step,
+                    "subject": step.get("subject"),
+                    "run_id": run_id,
+                    "correlation_id": corr_id,
+                    "message_id": message_id,
+                }),
+            },
+        )
+
+        # Create audit log
+        await prisma.auditlog.create(
+            data={
+                "action": "email_sent",
+                "entityType": "lead",
+                "entityId": lead_id,
+                "details": json.dumps({
+                    "contact_email": contact.email,
+                    "sequence_id": sequence_id,
+                    "step": current_step,
+                    "run_id": run_id,
+                    "correlation_id": corr_id,
+                }),
+            },
+        )
+
+        logger.info(
+            f"Email sent: lead_id={lead_id}, step={current_step}",
+            extra={"run_id": run_id, "lead_id": lead_id, "step": current_step}
+        )
+        return {"status": "sent", "lead_id": lead_id, "step": current_step}
+    else:
+        logger.warning(
+            f"Email send failed for lead {lead_id}, scheduling retry",
+            extra={"run_id": run_id, "lead_id": lead_id}
+        )
+        raise Exception("Email send failed")
 
 
-@celery_app.task(name="agents.email_outreach.process_bounce", bind=True, max_retries=3)
-def process_bounce(self, message_id: str, bounce_type: str, details: dict, correlation_id: str | None = None):
+async def process_bounce(message_id: str, bounce_type: str, details: dict, correlation_id: str | None = None):
     """
     Handle bounced email notification.
     Marks lead appropriately and logs the bounce.
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    AgentContext(role=AgentRole.OUTREACH)
+    AgentContext(role="outreach")
 
     logger.info(
         f"Processing bounce: message_id={message_id}, type={bounce_type}",
-        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+        extra={"run_id": run_id, "correlation_id": corr_id}
     )
 
-    async def _process_bounce():
-        SessionLocal = get_async_session_local()
-        if SessionLocal is None:
-            logger.error("Database not configured", extra={"run_id": run_id})
-            return {"status": "error", "message": "Database not configured"}
+    if not prisma.is_connected:
+        logger.error("Database not configured", extra={"run_id": run_id})
+        return {"status": "error", "message": "Database not configured"}
 
-        async with SessionLocal() as db:
-            result = await db.execute(
-                select(Activity)
-                .where(Activity.activity_meta.op("->>")("message_id") == message_id)
-                .options(selectinload(Activity.lead))
-            )
-            activity = result.scalar_one_or_none()
-            if not activity or not activity.lead:
-                logger.warning(
-                    f"No activity found for bounce message_id={message_id}",
-                    extra={"run_id": run_id}
-                )
-                return {"status": "ignored"}
+    # Query activities where activity_meta->>'$.message_id' == message_id
+    activity = await prisma.activity.find_first(
+        where={
+            "activity_meta": {
+                "contains": f'"message_id": "{message_id}"',
+            }
+        },
+        include={"lead": True},
+    )
 
-            lead = activity.lead
-            lead.notes = (lead.notes or "") + f"\n[Bounce {bounce_type}]: {details.get('reason', 'Unknown')}"
+    if not activity or not activity.lead:
+        logger.warning(
+            f"No activity found for bounce message_id={message_id}",
+            extra={"run_id": run_id}
+        )
+        return {"status": "ignored"}
 
-            audit = AuditLog(
-                action="email_bounced",
-                entity_type="lead",
-                entity_id=lead.id,
-                details={
-                    "message_id": message_id,
-                    "bounce_type": bounce_type,
-                    "details": details,
-                    "run_id": run_id,
-                    "correlation_id": corr_id,
-                },
-            )
-            db.add(audit)
-            await db.commit()
-            logger.info(
-                f"Bounce processed: lead_id={lead.id}",
-                extra={"run_id": run_id, "lead_id": lead.id}
-            )
-            return {"status": "processed", "lead_id": lead.id}
+    lead = activity.lead
+    existing_notes = lead.notes or ""
+    new_note = f"\n[Bounce {bounce_type}]: {details.get('reason', 'Unknown')}"
 
-    return run_async(_process_bounce())
+    await prisma.lead.update(
+        where={"id": lead.id},
+        data={"notes": existing_notes + new_note},
+    )
+
+    await prisma.auditlog.create(
+        data={
+            "action": "email_bounced",
+            "entityType": "lead",
+            "entityId": lead.id,
+            "details": json.dumps({
+                "message_id": message_id,
+                "bounce_type": bounce_type,
+                "details": details,
+                "run_id": run_id,
+                "correlation_id": corr_id,
+            }),
+        },
+    )
+
+    logger.info(
+        f"Bounce processed: lead_id={lead.id}",
+        extra={"run_id": run_id, "lead_id": lead.id}
+    )
+    return {"status": "processed", "lead_id": lead.id}
 
 
-@celery_app.task(name="agents.email_outreach.check_engagement", bind=True, max_retries=3)
-def check_engagement(self, lead_id: int, correlation_id: str | None = None):
+async def check_engagement(lead_id: int, correlation_id: str | None = None):
     """
     Check if a lead has opened/replied to recent emails.
     Updates lead score based on engagement.
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    AgentContext(role=AgentRole.OUTREACH)
+    AgentContext(role="outreach")
 
     logger.info(
         f"Checking engagement: lead_id={lead_id}",
-        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+        extra={"run_id": run_id, "correlation_id": corr_id}
     )
 
-    async def _check_engagement():
-        SessionLocal = get_async_session_local()
-        if SessionLocal is None:
-            logger.error("Database not configured", extra={"run_id": run_id})
-            return {"status": "error", "message": "Database not configured"}
+    if not prisma.is_connected:
+        logger.error("Database not configured", extra={"run_id": run_id})
+        return {"status": "error", "message": "Database not configured"}
 
-        async with SessionLocal() as db:
-            result = await db.execute(
-                select(Activity)
-                .where(Activity.lead_id == lead_id)
-                .where(Activity.type.in_([ActivityType.EMAIL_OPENED, ActivityType.EMAIL_REPLIED]))
-                .order_by(Activity.created_at.desc())
-                .limit(5)
-            )
-            activities = result.scalars().all()
+    activities = await prisma.activity.find_many(
+        where={
+            "lead_id": lead_id,
+            "type": {"in": ["email_opened", "email_replied"]},
+        },
+        order={"createdAt": "desc"},
+        take=5,
+    )
 
-            if not activities:
-                return {"status": "no_engagement", "lead_id": lead_id}
+    if not activities:
+        return {"status": "no_engagement", "lead_id": lead_id}
 
-            engaged_types = {a.type for a in activities}
-            score_delta = 0
-            if ActivityType.EMAIL_REPLIED in engaged_types:
-                score_delta = 20
-            elif ActivityType.EMAIL_OPENED in engaged_types:
-                score_delta = 5
+    engaged_types = {a.type for a in activities}
+    score_delta = 0
+    if "email_replied" in engaged_types:
+        score_delta = 20
+    elif "email_opened" in engaged_types:
+        score_delta = 5
 
-            lead_result = await db.execute(select(Lead).where(Lead.id == lead_id))
-            lead = lead_result.scalar_one_or_none()
-            if lead:
-                lead.score = min(100, lead.score + score_delta)
-                await db.commit()
-                logger.info(
-                    f"Engagement score updated: lead_id={lead_id}, delta={score_delta}",
-                    extra={"run_id": run_id, "lead_id": lead_id, "score_delta": score_delta}
-                )
-                return {"status": "updated", "lead_id": lead_id, "score_delta": score_delta}
+    lead = await prisma.lead.find_unique(where={"id": lead_id})
+    if lead:
+        new_score = min(100, lead.score + score_delta)
+        await prisma.lead.update(
+            where={"id": lead_id},
+            data={"score": new_score},
+        )
+        logger.info(
+            f"Engagement score updated: lead_id={lead_id}, delta={score_delta}",
+            extra={"run_id": run_id, "lead_id": lead_id, "score_delta": score_delta}
+        )
+        return {"status": "updated", "lead_id": lead_id, "score_delta": score_delta}
 
-            return {"status": "error", "message": "Lead not found"}
-
-    return run_async(_check_engagement())
+    return {"status": "error", "message": "Lead not found"}
 
 
-@celery_app.task(name="agents.email_outreach.enroll_in_sequence", bind=True, max_retries=3)
-def enroll_in_sequence(self, lead_id: int, sequence_id: int, correlation_id: str | None = None):
+async def enroll_in_sequence(lead_id: int, sequence_id: int, correlation_id: str | None = None):
     """
     Enroll a lead in an email sequence.
     """
     run_id = get_current_run_id()
     corr_id = correlation_id or get_current_correlation_id()
-    AgentContext(role=AgentRole.OUTREACH)
+    AgentContext(role="outreach")
 
     logger.info(
         f"Enrolling lead in sequence: lead_id={lead_id}, sequence_id={sequence_id}",
-        extra={"run_id": run_id, "correlation_id": corr_id, "task_name": self.name}
+        extra={"run_id": run_id, "correlation_id": corr_id}
     )
 
-    async def _enroll():
-        SessionLocal = get_async_session_local()
-        if SessionLocal is None:
-            logger.error("Database not configured", extra={"run_id": run_id})
-            return {"status": "error", "message": "Database not configured"}
+    if not prisma.is_connected:
+        logger.error("Database not configured", extra={"run_id": run_id})
+        return {"status": "error", "message": "Database not configured"}
 
-        async with SessionLocal() as db:
-            existing = await db.execute(
-                select(SequenceEnrollment)
-                .where(SequenceEnrollment.lead_id == lead_id)
-                .where(SequenceEnrollment.sequence_id == sequence_id)
-            )
-            enrollment = existing.scalar_one_or_none()
-            if enrollment:
-                return {"status": "already_enrolled", "enrollment_id": enrollment.id}
+    existing = await prisma.sequenceenrollment.find_first(
+        where={
+            "lead_id": lead_id,
+            "sequence_id": sequence_id,
+        },
+    )
+    if existing:
+        return {"status": "already_enrolled", "enrollment_id": existing.id}
 
-            enrollment = SequenceEnrollment(
-                lead_id=lead_id,
-                sequence_id=sequence_id,
-                current_step=0,
-                status="active",
-                enrolled_at=datetime.utcnow(),
-            )
-            db.add(enrollment)
-            await db.flush()
+    enrollment = await prisma.sequenceenrollment.create(
+        data={
+            "lead_id": lead_id,
+            "sequence_id": sequence_id,
+            "currentStep": 0,
+            "status": "active",
+            "enrolledAt": datetime.utcnow(),
+        },
+    )
 
-            audit = AuditLog(
-                action="sequence_enrolled",
-                entity_type="lead",
-                entity_id=lead_id,
-                details={
-                    "sequence_id": sequence_id,
-                    "enrollment_id": enrollment.id,
-                    "run_id": run_id,
-                    "correlation_id": corr_id,
-                },
-            )
-            db.add(audit)
-            await db.commit()
-            logger.info(
-                f"Lead enrolled in sequence: lead_id={lead_id}, enrollment_id={enrollment.id}",
-                extra={"run_id": run_id}
-            )
-            return {"status": "enrolled", "enrollment_id": enrollment.id}
+    await prisma.auditlog.create(
+        data={
+            "action": "sequence_enrolled",
+            "entityType": "lead",
+            "entityId": lead_id,
+            "details": json.dumps({
+                "sequence_id": sequence_id,
+                "enrollment_id": enrollment.id,
+                "run_id": run_id,
+                "correlation_id": corr_id,
+            }),
+        },
+    )
 
-    return run_async(_enroll())
+    logger.info(
+        f"Lead enrolled in sequence: lead_id={lead_id}, enrollment_id={enrollment.id}",
+        extra={"run_id": run_id}
+    )
+    return {"status": "enrolled", "enrollment_id": enrollment.id}
