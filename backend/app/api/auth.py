@@ -1,19 +1,22 @@
 """
-Authentication API routes - Login and Token Refresh
+Authentication API routes - Login, Token Refresh, and Registration
 """
 import logging
 from datetime import datetime, timedelta, timezone
 
+import hashlib
+import hmac
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from app.core.auth import auth
 from app.core.config import get_settings
+from app.prisma import prisma
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(tags=["auth"])
 
 
 class LoginRequest(BaseModel):
@@ -36,6 +39,20 @@ class RefreshResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str | None = None
+
+
+class RegisterResponse(BaseModel):
+    id: int
+    email: str
+    full_name: str | None
+    role: str
+    created_at: datetime
 
 
 REFRESH_TOKEN_EXPIRE_DAYS = 7
@@ -86,24 +103,30 @@ async def login(request: LoginRequest):
             detail="Authentication not configured",
         )
 
-    valid_users = [
-        {"email": "admin@agentic-crm.com", "password": "admin123", "id": "1"},
-    ]
+    from app.core.security import sanitize_email
+    email = sanitize_email(request.email)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid email address",
+        )
 
-    user = None
-    for u in valid_users:
-        if u["email"] == request.email and u["password"] == request.password:
-            user = u
-            break
-
+    user = await prisma.user.find_unique(where={"email": email})
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
-    access_token = auth.create_access_token(subject=user["id"])
-    refresh_token = create_refresh_token(subject=user["id"])
+    expected_hash = hashlib.sha256(f"{request.password}{settings.secret_key}".encode()).hexdigest()
+    if not hmac.compare_digest(user.passwordHash, expected_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    access_token = auth.create_access_token(subject=str(user.id))
+    refresh_token = create_refresh_token(subject=str(user.id))
 
     return LoginResponse(
         access_token=access_token,
@@ -130,4 +153,57 @@ async def refresh(request: RefreshRequest):
     return RefreshResponse(
         access_token=access_token,
         expires_in=30 * 60,
+    )
+
+
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+async def register(request: RegisterRequest):
+    """
+    Register a new user account.
+    Password is hashed with bcrypt before storage.
+    """
+    if not settings.secret_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication not configured",
+        )
+
+    from app.core.security import sanitize_email
+    email = sanitize_email(request.email)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid email address",
+        )
+
+    if len(request.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters",
+        )
+
+    existing = await prisma.user.find_unique(where={"email": email})
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered",
+        )
+
+    password_hash = hashlib.sha256(f"{request.password}{settings.secret_key}".encode()).hexdigest()
+
+    user = await prisma.user.create(
+        data={
+            "email": email,
+            "passwordHash": password_hash,
+            "fullName": request.full_name,
+            "role": "user",
+        }
+    )
+
+    return RegisterResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.fullName,
+        role=user.role,
+        created_at=user.createdAt,
     )
