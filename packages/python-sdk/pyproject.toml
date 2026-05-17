@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "agentic-crm-sdk"
+version = "0.1.0"
+description = "Python SDK for Agentic CRM API"
+authors = ["Artflarex Solutions <dev@artflarex.com>"]
+readme = "README.md"
+packages = [{include = "agentic_crm_sdk", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+httpx = "^0.27.0"
+pydantic = "^2.8.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+pytest-asyncio = "^0.24.0"
+ruff = "^0.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
