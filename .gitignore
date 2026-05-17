@@ -121,4 +121,4 @@ dmypy.json
 # Build artifacts
 *.egg-info/
 dist/
-build/
+build/node_modules/
