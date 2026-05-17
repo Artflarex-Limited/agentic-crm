@@ -1,6 +1,6 @@
 """
-Semantic Search API endpoints.
-POST /api/search/semantic - Semantic search with embeddings
+Search API endpoints.
+POST /api/search/semantic - Semantic search (fallback to basic search since ES removed)
 POST /api/search/leads
 POST /api/search/contacts
 POST /api/search/companies
@@ -28,32 +28,24 @@ class SemanticSearchRequest(BaseModel):
 @router.post("/semantic")
 async def semantic_search(request: SemanticSearchRequest):
     """
-    Semantic search using vector embeddings.
+    Semantic search — falls back to basic SQLite search since Elasticsearch is removed.
 
     - **query**: Text query to search
     - **index**: Target index ('leads', 'contacts', 'companies')
-    - **embedding**: Pre-computed vector embedding (optional - will use ML service if not provided)
-    - **use_semantic**: Whether to use semantic search (True) or keyword only (False)
+    - **embedding**: Pre-computed vector embedding (ignored — ES removed)
+    - **use_semantic**: Ignored — ES removed
     - **size**: Number of results to return
     - **filters**: Optional filters (stage, source, tags, etc.)
     """
     service = await get_search_service()
 
-    embedding = request.embedding
-
-    if embedding is None and request.use_semantic:
-        embedding = await service.get_query_embedding(request.query)
-
     result = await service.semantic_search(
         index=request.index,
         query_text=request.query,
-        embedding=embedding,
+        embedding=request.embedding,
         size=request.size,
         filters=request.filters,
     )
-
-    if embedding and request.use_semantic:
-        result = await service.rerank_results(result, request.query)
 
     return result
 
@@ -67,7 +59,7 @@ async def search_leads(
     size: int = Query(default=10, ge=1, le=100),
 ):
     """
-    Semantic search for leads.
+    Search for leads using SQLite full-text (Prisma contains).
 
     - **query**: Text query for search
     - **stage**: Filter by lead stage (new, contacted, qualified, etc.)
@@ -100,7 +92,7 @@ async def search_contacts(
     size: int = Query(default=10, ge=1, le=100),
 ):
     """
-    Semantic search for contacts.
+    Search for contacts using SQLite full-text (Prisma contains).
 
     - **query**: Text query for search
     - **company**: Filter by company name
@@ -127,7 +119,7 @@ async def search_companies(
     size_limit: int = Query(default=10, ge=1, le=100),
 ):
     """
-    Semantic search for companies.
+    Search for companies using SQLite full-text (Prisma contains).
 
     - **query**: Text query for search
     - **industry**: Filter by industry
@@ -148,6 +140,6 @@ async def search_companies(
 
 @router.get("/health")
 async def search_health():
-    """Check semantic search service health."""
+    """Check search service health."""
     service = await get_search_service()
     return await service.health_check()
