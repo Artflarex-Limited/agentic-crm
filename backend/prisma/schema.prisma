@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-py"
+  output   = "../app/generated"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  fullName     String?
+  role         String   @default("user")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Company {
+  id         Int       @id @default(autoincrement())
+  name       String
+  domain     String?
+  industry   String?
+  size       String?
+  linkedinUrl String?
+  extraData  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  contacts   Contact[]
+  deals      Deal[]
+}
+
+model Contact {
+  id          Int        @id @default(autoincrement())
+  companyId   Int?
+  firstName   String?
+  lastName    String?
+  email       String?
+  phone       String?
+  title       String?
+  linkedinUrl String?
+  extraData   String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  company     Company?   @relation(fields: [companyId], references: [id])
+  leads       Lead[]
+  deals       Deal[]
+  activities  Activity[]
+}
+
+model Lead {
+  id               Int        @id @default(autoincrement())
+  contactId        Int
+  source           String     @default("other")
+  stage            String     @default("new")
+  score            Int        @default(0)
+  tags             String?
+  notes            String?
+  assignedAgentId  Int?
+  snoozeUntil      DateTime?
+  lastContactedAt  DateTime?
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  utmTerm          String?
+  utmContent       String?
+  hubspotContactId String?
+  gaClientId       String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  contact          Contact    @relation(fields: [contactId], references: [id])
+  assignedAgent    Agent?     @relation(fields: [assignedAgentId], references: [id])
+  activities       Activity[]
+  sequenceEnrollments SequenceEnrollment[]
+}
+
+model Deal {
+  id               Int        @id @default(autoincrement())
+  contactId        Int
+  companyId        Int?
+  name             String
+  value            Float      @default(0)
+  stage            String     @default("lead")
+  expectedCloseDate DateTime?
+  actualCloseDate  DateTime?
+  notes            String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  contact          Contact    @relation(fields: [contactId], references: [id])
+  company          Company?   @relation(fields: [companyId], references: [id])
+  activities       Activity[]
+}
+
+model Agent {
+  id          Int       @id @default(autoincrement())
+  name        String
+  role        String
+  status      String    @default("paused")
+  config      String?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  assignedLeads         Lead[]
+  activities          Activity[]
+  auditLogs           AuditLog[]
+  procurementRequests  ProcurementRequest[]
+}
+
+model Sequence {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  steps       String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  enrollments SequenceEnrollment[]
+}
+
+model SequenceEnrollment {
+  id          Int       @id @default(autoincrement())
+  leadId      Int
+  sequenceId  Int
+  currentStep Int       @default(0)
+  status      String    @default("active")
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+  lastSentAt  DateTime?
+  lead        Lead      @relation(fields: [leadId], references: [id])
+  sequence    Sequence  @relation(fields: [sequenceId], references: [id])
+}
+
+model Activity {
+  id           Int        @id @default(autoincrement())
+  leadId       Int?
+  contactId    Int?
+  dealId       Int?
+  agentId      Int?
+  type         String
+  content      String?
+  activityMeta String?
+  createdAt    DateTime   @default(now())
+  lead         Lead?      @relation(fields: [leadId], references: [id])
+  contact      Contact?   @relation(fields: [contactId], references: [id])
+  deal         Deal?      @relation(fields: [dealId], references: [id])
+  agent        Agent?     @relation(fields: [agentId], references: [id])
+}
+
+model AuditLog {
+  id         Int       @id @default(autoincrement())
+  agentId    Int?
+  action     String
+  entityType String?
+  entityId   Int?
+  details    String?
+  createdAt  DateTime  @default(now())
+  agent      Agent?    @relation(fields: [agentId], references: [id])
+}
+
+model ProductCategory {
+  id          Int       @id @default(autoincrement())
+  family      String
+  cls         String
+  commodity   String
+  description String?
+  keywords    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  procurementRequests ProcurementRequest[]
+}
+
+model Supplier {
+  id                 Int       @id @default(autoincrement())
+  companyName        String
+  country            String
+  businessEmail      String
+  phone              String?
+  website            String?
+  industry           String
+  productionCapacity String?
+  certifications     String?
+  exportingToEu      Boolean   @default(false)
+  description        String?
+  waitlistPosition   Int?
+  status             String    @default("pending")
+  verifiedAt         DateTime?
+  extraData          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  quotes             Quote[]
+  purchaseOrders     PurchaseOrder[]
+}
+
+model ProcurementRequest {
+  id                     Int        @id @default(autoincrement())
+  title                  String
+  description            String?
+  categoryId             Int?
+  quantity               String?
+  targetPrice            Float?
+  currency               String     @default("USD")
+  requestedDeliveryDate  DateTime?
+  status                 String     @default("draft")
+  priority               String     @default("medium")
+  createdBy              String?
+  assignedAgentId        Int?
+  extraData              String?
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+  category               ProductCategory? @relation(fields: [categoryId], references: [id])
+  assignedAgent          Agent?     @relation(fields: [assignedAgentId], references: [id])
+  quotes                 Quote[]
+  purchaseOrders         PurchaseOrder[]
+}
+
+model Quote {
+  id                   Int       @id @default(autoincrement())
+  procurementRequestId Int
+  supplierId           Int
+  price                Float
+  currency             String    @default("USD")
+  leadTimeDays         Int?
+  validityDays         Int       @default(30)
+  notes                String?
+  status               String    @default("pending")
+  submittedAt          DateTime?
+  expiresAt            DateTime?
+  extraData            String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  procurementRequest   ProcurementRequest @relation(fields: [procurementRequestId], references: [id])
+  supplier             Supplier  @relation(fields: [supplierId], references: [id])
+  purchaseOrder        PurchaseOrder?
+}
+
+model PurchaseOrder {
+  id                   Int       @id @default(autoincrement())
+  procurementRequestId Int
+  supplierId           Int
+  quoteId              Int?      @unique
+  orderNumber          String    @unique
+  totalAmount          Float
+  currency             String    @default("USD")
+  status               String    @default("draft")
+  expectedDeliveryDate DateTime?
+  actualDeliveryDate   DateTime?
+  shippingAddress      String?
+  notes                String?
+  extraData            String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  procurementRequest   ProcurementRequest @relation(fields: [procurementRequestId], references: [id])
+  supplier             Supplier  @relation(fields: [supplierId], references: [id])
+  quote                Quote?    @relation(fields: [quoteId], references: [id])
+}
+
+model Shipment {
+  id              Int       @id @default(autoincrement())
+  purchaseOrderId Int
+  trackingNumber  String?
+  carrier         String?
+  status          String    @default("preparing")
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Invoice {
+  id              Int       @id @default(autoincrement())
+  purchaseOrderId Int
+  invoiceNumber   String    @unique
+  amount          Float
+  currency        String    @default("USD")
+  status          String    @default("draft")
+  issuedAt        DateTime?
+  dueDate         DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
