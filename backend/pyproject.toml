@@ -57,6 +57,7 @@ ignore = [
     "E402",   # module level import not at top (generated files)
     "B008",   # do not perform calls in argument defaults
     "B904",   # raise from err in except
+    "F403",   # star import (generated Prisma client)
     "UP",     # pyupgrade (auto-generated code)
     "SIM",    # simplify (auto-generated code)
     "W293",   # blank line contains whitespace
