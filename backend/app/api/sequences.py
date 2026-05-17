@@ -1,76 +1,87 @@
 """
 Sequences API routes
 """
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+import json
 
-from app.db.database import get_db
-from app.models.models import Lead, Sequence, SequenceEnrollment
+from fastapi import APIRouter, HTTPException
+
+from app.prisma import prisma
 from app.schemas.schemas import SequenceCreate, SequenceResponse
 
 router = APIRouter()
 
 
 @router.get("/", response_model=list[SequenceResponse])
-async def list_sequences(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Sequence).order_by(Sequence.id.desc()))
-    return result.scalars().all()
+async def list_sequences():
+    results = await prisma.sequence.find_many(order=[{"id": "desc"}])
+    sequences = []
+    for r in results:
+        data = r.model_dump()
+        # Deserialize JSON fields
+        if data.get("steps"):
+            data["steps"] = json.loads(data["steps"]) if isinstance(data["steps"], str) else data["steps"]
+        sequences.append(data)
+    return sequences
 
 
 @router.get("/{sequence_id}", response_model=SequenceResponse)
-async def get_sequence(sequence_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Sequence).where(Sequence.id == sequence_id))
-    seq = result.scalar_one_or_none()
+async def get_sequence(sequence_id: int):
+    seq = await prisma.sequence.find_first(where={"id": sequence_id})
     if not seq:
         raise HTTPException(status_code=404, detail="Sequence not found")
-    return seq
+    data = seq.model_dump()
+    if data.get("steps"):
+        data["steps"] = json.loads(data["steps"]) if isinstance(data["steps"], str) else data["steps"]
+    return data
 
 
 @router.post("/", response_model=SequenceResponse, status_code=201)
-async def create_sequence(data: SequenceCreate, db: AsyncSession = Depends(get_db)):
-    seq = Sequence(**data.model_dump())
-    db.add(seq)
-    await db.commit()
-    await db.refresh(seq)
-    return seq
+async def create_sequence(data: SequenceCreate):
+    payload = data.model_dump()
+    # Serialize JSON fields
+    if payload.get("steps"):
+        payload["steps"] = json.dumps(payload["steps"])
+    seq = await prisma.sequence.create(data=payload)
+    result_data = seq.model_dump()
+    if result_data.get("steps"):
+        result_data["steps"] = json.loads(result_data["steps"]) if isinstance(result_data["steps"], str) else result_data["steps"]
+    return result_data
 
 
 @router.put("/{sequence_id}", response_model=SequenceResponse)
-async def update_sequence(sequence_id: int, data: SequenceCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Sequence).where(Sequence.id == sequence_id))
-    seq = result.scalar_one_or_none()
+async def update_sequence(sequence_id: int, data: SequenceCreate):
+    seq = await prisma.sequence.find_first(where={"id": sequence_id})
     if not seq:
         raise HTTPException(status_code=404, detail="Sequence not found")
-    for key, value in data.model_dump().items():
-        setattr(seq, key, value)
-    await db.commit()
-    await db.refresh(seq)
-    return seq
+    payload = data.model_dump()
+    # Serialize JSON fields
+    if payload.get("steps"):
+        payload["steps"] = json.dumps(payload["steps"])
+    seq = await prisma.sequence.update(where={"id": sequence_id}, data=payload)
+    result_data = seq.model_dump()
+    if result_data.get("steps"):
+        result_data["steps"] = json.loads(result_data["steps"]) if isinstance(result_data["steps"], str) else result_data["steps"]
+    return result_data
 
 
 @router.delete("/{sequence_id}")
-async def delete_sequence(sequence_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Sequence).where(Sequence.id == sequence_id))
-    seq = result.scalar_one_or_none()
+async def delete_sequence(sequence_id: int):
+    seq = await prisma.sequence.find_first(where={"id": sequence_id})
     if not seq:
         raise HTTPException(status_code=404, detail="Sequence not found")
-    await db.delete(seq)
-    await db.commit()
+    await prisma.sequence.delete(where={"id": sequence_id})
     return {"deleted": True}
 
 
 @router.post("/{sequence_id}/enroll/{lead_id}")
-async def enroll_lead(sequence_id: int, lead_id: int, db: AsyncSession = Depends(get_db)):
+async def enroll_lead(sequence_id: int, lead_id: int):
     """Enroll a lead into a sequence"""
     # Verify lead exists
-    lead_result = await db.execute(select(Lead).where(Lead.id == lead_id))
-    lead = lead_result.scalar_one_or_none()
+    lead = await prisma.lead.find_first(where={"id": lead_id})
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    enrollment = SequenceEnrollment(lead_id=lead_id, sequence_id=sequence_id)
-    db.add(enrollment)
-    await db.commit()
-    await db.refresh(enrollment)
+    enrollment = await prisma.sequenceenrollment.create(
+        data={"leadId": lead_id, "sequenceId": sequence_id}
+    )
     return {"enrolled": True, "enrollment_id": enrollment.id}
