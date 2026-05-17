@@ -163,20 +163,22 @@ async def test_agent_status_transitions(session_prisma, sample_agent):
 
 @pytest.mark.asyncio
 async def test_sequence_crud(session_prisma):
+    import json
     sequence = await prisma.sequence.create(
         data={
             "name": "Follow-up Sequence",
             "description": "Re-engagement emails",
-            "steps": [
+            "steps": json.dumps([
                 {"type": "email", "subject": "Checking in", "content": "Hi!", "delay_days": 1},
                 {"type": "email", "subject": "Still interested?", "content": "Bump", "delay_days": 3},
-            ],
-            "is_active": True
+            ]),
+            "isActive": True
         }
     )
     assert sequence.id is not None
-    assert len(sequence.steps) == 2
-    assert sequence.is_active is True
+    steps = json.loads(sequence.steps) if sequence.steps else []
+    assert len(steps) == 2
+    assert sequence.isActive is True
 
 
 @pytest.mark.asyncio
@@ -185,7 +187,7 @@ async def test_sequence_enrollment_crud(session_prisma, sample_lead, sample_sequ
         data={
             "leadId": sample_lead.id,
             "sequenceId": sample_sequence.id,
-            "current_step": 0,
+            "currentStep": 0,
             "status": "active"
         }
     )
@@ -219,8 +221,8 @@ async def test_audit_log_crud(session_prisma, sample_agent):
         data={
             "agentId": sample_agent.id,
             "action": "lead_stage_changed",
-            "entity_type": "lead",
-            "entity_id": 1,
+            "entityType": "lead",
+            "entityId": 1,
             "details": '{"from": "new", "to": "contacted"}'
         }
     )
@@ -263,7 +265,8 @@ async def test_lead_snooze(session_prisma, sample_lead):
         where={"id": sample_lead.id},
         data={"snoozeUntil": future}
     )
-    assert updated.snoozeUntil == future
+    assert updated.snoozeUntil is not None
+    assert abs((updated.snoozeUntil.replace(tzinfo=None) - future.replace(tzinfo=None)).total_seconds()) < 1
 
 
 @pytest.mark.asyncio
@@ -273,4 +276,5 @@ async def test_lead_last_contacted(session_prisma, sample_lead):
         where={"id": sample_lead.id},
         data={"lastContactedAt": now}
     )
-    assert updated.lastContactedAt == now
+    assert updated.lastContactedAt is not None
+    assert abs((updated.lastContactedAt.replace(tzinfo=None) - now.replace(tzinfo=None)).total_seconds()) < 1

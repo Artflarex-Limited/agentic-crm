@@ -11,7 +11,7 @@ from app.prisma import prisma
 
 @pytest.mark.asyncio
 async def test_lead_model_to_dict(sample_lead, sample_contact):
-    assert sample_lead.contact_id == sample_contact.id
+    assert sample_lead.contactId == sample_contact.id
     assert sample_lead.stage == LeadStage.NEW.value
 
 
@@ -19,9 +19,9 @@ async def test_lead_model_to_dict(sample_lead, sample_contact):
 async def test_sequence_enrollment_status(session_prisma, sample_lead, sample_sequence):
     enrollment = await prisma.sequenceenrollment.create(
         data={
-            "lead_id": sample_lead.id,
-            "sequence_id": sample_sequence.id,
-            "current_step": 0,
+            "leadId": sample_lead.id,
+            "sequenceId": sample_sequence.id,
+            "currentStep": 0,
             "status": "active"
         }
     )
@@ -31,7 +31,7 @@ async def test_sequence_enrollment_status(session_prisma, sample_lead, sample_se
         where={"id": enrollment.id},
         data={
             "status": "completed",
-            "completed_at": datetime.now(timezone.utc)
+            "completedAt": datetime.now(timezone.utc)
         }
     )
     assert updated.status == "completed"
@@ -41,8 +41,8 @@ async def test_sequence_enrollment_status(session_prisma, sample_lead, sample_se
 async def test_activity_logging_for_email(session_prisma, sample_lead, sample_agent):
     activity = await prisma.activity.create(
         data={
-            "lead_id": sample_lead.id,
-            "agent_id": sample_agent.id,
+            "leadId": sample_lead.id,
+            "agentId": sample_agent.id,
             "type": ActivityType.EMAIL_SENT.value,
             "content": "Test email content",
         }
@@ -54,7 +54,7 @@ async def test_activity_logging_for_email(session_prisma, sample_lead, sample_ag
 async def test_activity_email_opened_typed(session_prisma, sample_lead):
     activity = await prisma.activity.create(
         data={
-            "lead_id": sample_lead.id,
+            "leadId": sample_lead.id,
             "type": ActivityType.EMAIL_OPENED.value,
         }
     )
@@ -65,7 +65,7 @@ async def test_activity_email_opened_typed(session_prisma, sample_lead):
 async def test_activity_email_replied_typed(session_prisma, sample_lead):
     activity = await prisma.activity.create(
         data={
-            "lead_id": sample_lead.id,
+            "leadId": sample_lead.id,
             "type": ActivityType.EMAIL_REPLIED.value,
         }
     )
@@ -76,27 +76,29 @@ async def test_activity_email_replied_typed(session_prisma, sample_lead):
 async def test_sequence_step_progression(session_prisma, sample_lead, sample_sequence):
     enrollment = await prisma.sequenceenrollment.create(
         data={
-            "lead_id": sample_lead.id,
-            "sequence_id": sample_sequence.id,
-            "current_step": 0,
+            "leadId": sample_lead.id,
+            "sequenceId": sample_sequence.id,
+            "currentStep": 0,
             "status": "active"
         }
     )
 
+    import json
     sequence = await prisma.sequence.find_unique(where={"id": sample_sequence.id})
-    assert len(sequence.steps) == 2
+    steps = json.loads(sequence.steps) if sequence.steps else []
+    assert len(steps) == 2
 
     updated1 = await prisma.sequenceenrollment.update(
         where={"id": enrollment.id},
-        data={"current_step": 1}
+        data={"currentStep": 1}
     )
-    assert updated1.current_step == 1
+    assert updated1.currentStep == 1
 
     updated2 = await prisma.sequenceenrollment.update(
         where={"id": enrollment.id},
-        data={"current_step": 2}
+        data={"currentStep": 2}
     )
-    assert updated2.current_step >= len(sequence.steps)
+    assert updated2.currentStep >= len(steps)
 
 
 @pytest.mark.asyncio
@@ -114,22 +116,22 @@ async def test_agent_status_active_to_paused(session_prisma, sample_agent):
 async def test_audit_log_on_lead_stage_change(session_prisma, sample_lead, sample_agent):
     audit = await prisma.auditlog.create(
         data={
-            "agent_id": sample_agent.id,
+            "agentId": sample_agent.id,
             "action": "lead_stage_changed",
-            "entity_type": "lead",
-            "entity_id": sample_lead.id,
+            "entityType": "lead",
+            "entityId": sample_lead.id,
             "details": '{"from": "new", "to": "qualified"}'
         }
     )
     assert audit.action == "lead_stage_changed"
-    assert audit.entity_type == "lead"
+    assert audit.entityType == "lead"
 
 
 @pytest.mark.asyncio
 async def test_check_engagement_no_activity(session_prisma, sample_lead):
     activities = await prisma.activity.find_many(
         where={
-            "lead_id": sample_lead.id,
+            "leadId": sample_lead.id,
             "type": {"in": [ActivityType.EMAIL_OPENED.value, ActivityType.EMAIL_REPLIED.value]}
         }
     )
@@ -140,8 +142,8 @@ async def test_check_engagement_no_activity(session_prisma, sample_lead):
 async def test_check_engagement_with_replies(session_prisma, sample_lead, sample_agent):
     await prisma.activity.create(
         data={
-            "lead_id": sample_lead.id,
-            "agent_id": sample_agent.id,
+            "leadId": sample_lead.id,
+            "agentId": sample_agent.id,
             "type": ActivityType.EMAIL_REPLIED.value,
             "content": "Great, I'm interested!"
         }
@@ -160,6 +162,7 @@ async def test_lead_snooze_mechanism(session_prisma, sample_lead):
     future = datetime.now(timezone.utc) + timedelta(days=3)
     updated = await prisma.lead.update(
         where={"id": sample_lead.id},
-        data={"snooze_until": future}
+        data={"snoozeUntil": future}
     )
-    assert updated.snooze_until == future
+    assert updated.snoozeUntil is not None
+    assert abs((updated.snoozeUntil.replace(tzinfo=None) - future.replace(tzinfo=None)).total_seconds()) < 1

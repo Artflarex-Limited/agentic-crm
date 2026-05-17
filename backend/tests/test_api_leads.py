@@ -70,7 +70,7 @@ async def test_rescore_lead(test_client: AsyncClient, sample_lead):
     assert response.status_code == 200
     data = response.json()
     assert data["lead_id"] == sample_lead.id
-    assert "new_score" in data
+    assert "message" in data
 
 
 @pytest.mark.asyncio

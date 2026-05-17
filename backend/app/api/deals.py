@@ -33,25 +33,15 @@ async def get_deal(deal_id: int):
 
 @router.post("/", response_model=DealResponse, status_code=201)
 async def create_deal(data: DealCreate):
-    data_dict = data.model_dump()
+    data_dict = data.model_dump(by_alias=True)
+    data_dict["contactId"] = data_dict.pop("contact_id")
+    if "company_id" in data_dict:
+        data_dict["companyId"] = data_dict.pop("company_id")
     deal = await prisma.deal.create(data=data_dict)
     deal = await prisma.deal.find_unique(
         where={"id": deal.id},
         include={"contact": True, "company": True},
     )
-
-    if deal.value and deal.value > 0:
-        from app.services.ga4_service import get_ga4_service, generate_ga_client_id
-        ga4_service = await get_ga4_service()
-        contact = deal.contact
-        await ga4_service.track_generate_rfq(
-            client_id=generate_ga_client_id(),
-            deal_id=deal.id,
-            deal_value=deal.value,
-            lead_id=deal.contact_id,
-            user_email=contact.email if contact else None,
-        )
-
     return _prisma_to_dict(deal)
 
 
@@ -138,7 +128,13 @@ async def update_deal(deal_id: int, data: DealUpdate):
         raise HTTPException(status_code=404, detail="Deal not found")
 
     old_stage = existing.stage
-    update_data = data.model_dump(exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True, by_alias=True)
+    rename_fields = {
+        "expected_close_date": "expectedCloseDate",
+    }
+    for old_key, new_key in rename_fields.items():
+        if old_key in update_data:
+            update_data[new_key] = update_data.pop(old_key)
 
     deal = await prisma.deal.update(
         where={"id": deal_id},
@@ -174,15 +170,44 @@ async def delete_deal(deal_id: int):
     return {"deleted": True}
 
 
+def _camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case."""
+    import re
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
 def _prisma_to_dict(obj) -> dict:
-    """Convert Prisma model to dict, parsing JSON string fields."""
+    """Convert Prisma model to dict, parsing JSON string fields and converting camelCase to snake_case recursively."""
     d = {}
     for key, value in obj.model_dump().items():
+        snake_key = _camel_to_snake(key)
         if key in ("tags", "extra_data") and isinstance(value, str):
             try:
-                d[key] = json.loads(value) if value else []
+                d[snake_key] = json.loads(value) if value else []
             except (json.JSONDecodeError, TypeError):
-                d[key] = value if value else []
+                d[snake_key] = value if value else []
+        elif isinstance(value, dict):
+            d[snake_key] = _convert_dict_keys(value)
+        elif hasattr(value, 'model_dump'):
+            d[snake_key] = _prisma_to_dict(value)
         else:
-            d[key] = value
+            d[snake_key] = value
     return d
+
+
+def _convert_dict_keys(d: dict) -> dict:
+    """Convert all keys in a dict from camelCase to snake_case recursively."""
+    result = {}
+    for key, value in d.items():
+        snake_key = _camel_to_snake(key)
+        if isinstance(value, dict):
+            result[snake_key] = _convert_dict_keys(value)
+        elif isinstance(value, list):
+            result[snake_key] = [
+                _convert_dict_keys(item) if isinstance(item, dict) else item
+                for item in value
+            ]
+        else:
+            result[snake_key] = value
+    return result

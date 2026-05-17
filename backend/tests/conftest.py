@@ -8,7 +8,7 @@ import sys
 import asyncio
 import tempfile
 from collections.abc import AsyncGenerator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import pytest_asyncio
@@ -17,23 +17,24 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 from app.prisma import prisma, connect_prisma, disconnect_prisma
 
-# Temp SQLite file per test run
-_test_db_file = tempfile.mktemp(suffix=".db")
-os.environ["DATABASE_URL"] = f"file:{_test_db_file}"
-os.environ["PRISMA_CLIENT_ENGINE_TYPE"] = "library"  # avoids binary subprocess event-loop issues
+
+def get_new_db_file():
+    return tempfile.mktemp(suffix=".db")
 
 
-# ─── Session-scoped Prisma connection ─────────────────────────────────────────
-
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def session_prisma():
-    """Push schema once, connect the module-level singleton for all tests."""
+    """Push schema and connect Prisma per test function."""
+    _test_db_file = get_new_db_file()
+    os.environ["DATABASE_URL"] = f"file:{_test_db_file}"
+
     subprocess.run(
         [sys.executable, "-m", "prisma", "db", "push", "--skip-generate",
          "--schema", "prisma/schema.prisma"],
         env={**os.environ},
         check=True,
         cwd="/root/agentic-crm/backend",
+        capture_output=True,
     )
     await connect_prisma()
     yield
@@ -44,18 +45,12 @@ async def session_prisma():
         pass
 
 
-# ─── Per-test HTTP client (reuses session_prisma) ────────────────────────────
-
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture
 async def test_client(session_prisma) -> AsyncGenerator[AsyncClient, None]:
-    """HTTP client for FastAPI routes — reuses the session's connected Prisma."""
-    # Use a shared transport so httpx reuses the connection across tests
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
-
-# ─── Sample data helpers ──────────────────────────────────────────────────────
 
 @pytest_asyncio.fixture
 async def sample_company(session_prisma):
@@ -111,7 +106,7 @@ async def sample_deal(sample_contact, sample_company):
             "name": "Acme Enterprise Deal",
             "value": 50000.0,
             "stage": DealStage.QUALIFIED.value,
-            "expectedCloseDate": datetime.utcnow() + timedelta(days=30),
+            "expectedCloseDate": datetime.now(timezone.utc) + timedelta(days=30),
         }
     )
     return deal
@@ -152,15 +147,16 @@ def auth_headers() -> dict:
 
 @pytest_asyncio.fixture
 async def sample_sequence(session_prisma):
+    import json
     sequence = await prisma.sequence.create(
         data={
             "name": "Test Sequence",
             "description": "Test sequence",
-            "steps": [
+            "steps": json.dumps([
                 {"type": "email", "subject": "Hello", "content": "Hi!", "delay_days": 1},
                 {"type": "email", "subject": "Follow up", "content": "Bump", "delay_days": 3},
-            ],
-            "is_active": True
+            ]),
+            "isActive": True
         }
     )
     return sequence
