@@ -31,6 +31,7 @@ from app.api import (
     sequences,
     webhooks,
 )
+from app.mcp import mcp_router
 from app.db.database import init_db
 
 settings = get_settings()
@@ -74,6 +75,7 @@ app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
 app.include_router(categorization.router, prefix="/api/ai", tags=["ai"])
 app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(market.router, prefix="/api", tags=["market"])
+app.include_router(mcp_router)
 
 
 @app.get("/health")
