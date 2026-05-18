@@ -23,11 +23,11 @@ FROM python:3.12-slim AS runner
 
 WORKDIR /app
 
-RUN mkdir -p /app/data /app/.prisma/binaries && \
-    chown -R appuser:appgroup /app
-
 RUN groupadd --gid 1000 appgroup && \
     useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
+
+RUN mkdir -p /app/data /app/.prisma/binaries && \
+    chown -R appuser:appgroup /app
 
 COPY --from=builder /install /usr/local
 
