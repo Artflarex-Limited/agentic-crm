@@ -10,10 +10,10 @@ Matches buyer RFQ requirements to verified suppliers using:
 
 Used by the AI agents to score and rank suppliers for RFQ responses.
 """
+import contextlib
 import json
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 from app.prisma import prisma
 
@@ -29,8 +29,17 @@ class SupplierMatchResult:
     match_score: float
     match_reasons: list[str]
     certifications: list[str]
-    production_capacity: Optional[str]
+    production_capacity: str | None
     exporting_to_eu: bool
+
+
+def _get_supplier_attr(supplier, attr: str, default=None):
+    """Get attribute from Prisma model or dataclass (handles camelCase vs snake_case)."""
+    if hasattr(supplier, attr):
+        return getattr(supplier, attr)
+    # Try snake_case version
+    snake = attr.replace('exportingToEu', 'exporting_to_eu').replace('companyName', 'company_name')
+    return getattr(supplier, snake, default)
 
 
 class SupplierMatchingService:
@@ -60,27 +69,21 @@ class SupplierMatchingService:
         Returns:
             List of SupplierMatchResult sorted by match_score descending
         """
-        try:
+        with contextlib.suppress(Exception):
             await prisma.connect()
-        except Exception:
-            pass
 
         where: dict = {}
         if country_filter:
             where["country"] = {"contains": country_filter}
-        if must_export_to_eu:
-            where["exporting_to_eu"] = True
-        # Filter by VERIFIED status using raw query since status is an enum
-        # We use a list to filter where status equals VERIFIED string value
 
         all_suppliers = await prisma.supplier.find_many(
             where=where,
         )
 
-        # Filter by status == VERIFIED
+        # Filter by status == VERIFIED (case-insensitive: Prisma stores enums as lowercase)
         verified_suppliers = [
             s for s in all_suppliers
-            if (hasattr(s.status, 'value') and s.status.value == "VERIFIED") or str(s.status) == "VERIFIED"
+            if str(s.status).lower() == "verified"
         ]
 
         matches = []
@@ -93,17 +96,19 @@ class SupplierMatchingService:
             )
 
             if score >= min_score:
-                certs = supplier.certifications if isinstance(supplier.certifications, list) else []
+                certs = _get_supplier_attr(supplier, 'certifications', [])
+                if isinstance(certs, str):
+                    certs = certs.split(',') if certs else []
                 matches.append(SupplierMatchResult(
                     supplier_id=supplier.id,
-                    company_name=supplier.company_name,
+                    company_name=_get_supplier_attr(supplier, 'companyName'),
                     country=supplier.country,
                     industry=supplier.industry,
                     match_score=score,
                     match_reasons=reasons,
                     certifications=certs,
-                    production_capacity=supplier.production_capacity,
-                    exporting_to_eu=supplier.exporting_to_eu,
+                    production_capacity=_get_supplier_attr(supplier, 'productionCapacity'),
+                    exporting_to_eu=_get_supplier_attr(supplier, 'exportingToEu'),
                 ))
 
         matches.sort(key=lambda x: x.match_score, reverse=True)
@@ -159,7 +164,9 @@ class SupplierMatchingService:
                 score += cat_score
                 reasons.append(f"Category match: {category_matches}/{len(required_categories)} categories")
 
-        certs = supplier.certifications if isinstance(supplier.certifications, list) else []
+        certs = _get_supplier_attr(supplier, 'certifications', [])
+        if isinstance(certs, str):
+            certs = [c.strip() for c in certs.split(',')] if certs else []
         if required_certifications and certs:
             cert_matches = [
                 cert for cert in required_certifications
@@ -170,7 +177,7 @@ class SupplierMatchingService:
                 score += cert_score
                 reasons.append(f"Certifications: {', '.join(cert_matches)}")
 
-        if supplier.exporting_to_eu:
+        if _get_supplier_attr(supplier, 'exportingToEu'):
             score += eu_export_weight
             reasons.append("Already exporting to EU")
 
@@ -235,7 +242,8 @@ class SupplierMatchingService:
             logger.warning(f"Supplier not found: {supplier_id}")
             return
 
-        extra_data = supplier.extra_data or {} if isinstance(supplier.extra_data, dict) else {}
+        extra_data_str = _get_supplier_attr(supplier, 'extraData') or '{}'
+        extra_data = json.loads(extra_data_str) if isinstance(extra_data_str, str) else (extra_data_str or {})
 
         match_history = extra_data.get("match_history", [])
         match_history.append({
@@ -247,7 +255,7 @@ class SupplierMatchingService:
 
         await prisma.supplier.update(
             where={"id": supplier_id},
-            data={"extra_data": json.dumps(extra_data)},
+            data={"extraData": json.dumps(extra_data)},
         )
 
         await prisma.auditlog.create(

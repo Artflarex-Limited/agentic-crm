@@ -5,10 +5,10 @@ Provides Model Context Protocol interface for AI agents to interact with the CRM
 Exposes tools for lead management, contact operations, deal tracking, and agent actions.
 """
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
@@ -189,7 +189,7 @@ async def update_lead(params: dict[str, Any]) -> dict[str, Any]:
 
     updateable_fields = ["stage", "score", "tags", "notes", "assigned_agent_id", "snooze_until", "last_contacted_at"]
     data = {k: v for k, v in params.items() if k in updateable_fields}
-    data["updated_at"] = datetime.now(timezone.utc)
+    data["updated_at"] = datetime.now(UTC)
 
     lead = await prisma.lead.update(where={"id": lead_id}, data=data)
 
@@ -243,15 +243,15 @@ async def list_leads(params: dict[str, Any]) -> dict[str, Any]:
         "data": {
             "leads": [
                 {
-                    "id": l.id,
-                    "contact_id": l.contact_id,
-                    "contact_email": l.contact.email if l.contact else None,
-                    "source": l.source,
-                    "stage": l.stage,
-                    "score": l.score,
-                    "created_at": l.created_at.isoformat() if l.created_at else None,
+                    "id": lead.id,
+                    "contact_id": lead.contact_id,
+                    "contact_email": lead.contact.email if lead.contact else None,
+                    "source": lead.source,
+                    "stage": lead.stage,
+                    "score": lead.score,
+                    "created_at": lead.created_at.isoformat() if lead.created_at else None,
                 }
-                for l in leads
+                for lead in leads
             ],
             "total": total,
             "limit": limit,
@@ -293,7 +293,7 @@ async def score_lead(params: dict[str, Any]) -> dict[str, Any]:
 
     await prisma.lead.update(
         where={"id": lead_id},
-        data={"score": score, "stage": new_stage, "updated_at": datetime.now(timezone.utc)},
+        data={"score": score, "stage": new_stage, "updated_at": datetime.now(UTC)},
     )
 
     await prisma.auditlog.create(
@@ -396,7 +396,7 @@ async def update_contact(params: dict[str, Any]) -> dict[str, Any]:
 
     updateable_fields = ["first_name", "last_name", "phone", "title", "linkedin_url", "company_id", "extra_data"]
     data = {k: v for k, v in params.items() if k in updateable_fields}
-    data["updated_at"] = datetime.now(timezone.utc)
+    data["updated_at"] = datetime.now(UTC)
 
     contact = await prisma.contact.update(where={"id": contact_id}, data=data)
 
@@ -535,7 +535,7 @@ async def update_deal(params: dict[str, Any]) -> dict[str, Any]:
 
     updateable_fields = ["name", "value", "stage", "expected_close_date", "actual_close_date", "notes"]
     data = {k: v for k, v in params.items() if k in updateable_fields}
-    data["updated_at"] = datetime.now(timezone.utc)
+    data["updated_at"] = datetime.now(UTC)
 
     deal = await prisma.deal.update(where={"id": deal_id}, data=data)
 
@@ -668,7 +668,7 @@ async def update_company(params: dict[str, Any]) -> dict[str, Any]:
 
     updateable_fields = ["name", "domain", "industry", "size", "linkedin_url", "extra_data"]
     data = {k: v for k, v in params.items() if k in updateable_fields}
-    data["updated_at"] = datetime.now(timezone.utc)
+    data["updated_at"] = datetime.now(UTC)
 
     company = await prisma.company.update(where={"id": company_id}, data=data)
 
@@ -821,7 +821,7 @@ async def enroll_in_sequence(params: dict[str, Any]) -> dict[str, Any]:
             "sequence_id": sequence_id,
             "current_step": 0,
             "status": "active",
-            "enrolled_at": datetime.now(timezone.utc),
+            "enrolled_at": datetime.now(UTC),
         }
     )
 
@@ -909,7 +909,7 @@ async def pause_agent(params: dict[str, Any]) -> dict[str, Any]:
 
     await prisma.agent.update(
         where={"id": agent_id},
-        data={"status": "paused", "updated_at": datetime.now(timezone.utc)},
+        data={"status": "paused", "updated_at": datetime.now(UTC)},
     )
 
     await prisma.auditlog.create(
@@ -936,7 +936,7 @@ async def resume_agent(params: dict[str, Any]) -> dict[str, Any]:
 
     await prisma.agent.update(
         where={"id": agent_id},
-        data={"status": "active", "updated_at": datetime.now(timezone.utc)},
+        data={"status": "active", "updated_at": datetime.now(UTC)},
     )
 
     await prisma.auditlog.create(
@@ -1017,8 +1017,8 @@ async def search_records(params: dict[str, Any]) -> dict[str, Any]:
         "success": True,
         "data": {
             "leads": [
-                {"id": l.id, "score": l.score, "stage": l.stage}
-                for l in leads
+                {"id": lead.id, "score": lead.score, "stage": lead.stage}
+                for lead in leads
             ],
             "contacts": [
                 {"id": c.id, "email": c.email, "name": f"{c.first_name or ''} {c.last_name or ''}".strip()}

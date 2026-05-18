@@ -1,12 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: agentic-crm-frontend
-  namespace: default
+  name: frontend
+  labels:
+    app: agentic-crm
+    component: frontend
 spec:
-  selector:
-    app: frontend
+  type: ClusterIP
   ports:
     - port: 3000
       targetPort: 3000
-  type: ClusterIP
+      protocol: TCP
+      name: http
+  selector:
+    app: agentic-crm
+    component: frontend

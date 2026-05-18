@@ -270,7 +270,7 @@ class CategorizationService:
 
         return self._fallback_categorize(text, confidence=0.5, source="nlp_pipeline")
 
-    async def categorize(self, text: str, image_bytes: Optional[bytes] = None) -> CategorizationResult:
+    async def categorize(self, text: str, image_bytes: bytes | None = None) -> CategorizationResult:
         """Combined categorization - prefer image if available."""
         if image_bytes:
             img_result = await self.categorize_from_image_bytes(image_bytes)

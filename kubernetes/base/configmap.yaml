@@ -2,14 +2,28 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: agentic-crm-config
-  namespace: default
+  labels:
+    app: agentic-crm
 data:
   POSTGRES_DB: "agentic_crm"
-  POSTGRES_USER: "agentic_user"
-  REDIS_URL: "redis://redis:6379/0"
-  LOG_LEVEL: "info"
+  POSTGRES_USER: "postgres"
   ENVIRONMENT: "production"
-  NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID: "your-google-ads-conversion-id"
-  NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL_RFQ: "your-rfq-conversion-label"
-  NEXT_PUBLIC_GA4_MEASUREMENT_ID: "G-XXXXXXXXXX"
-  NEXT_PUBLIC_HUBSPOT_PORTAL_ID: "XXXXXXXX"
+  LOG_LEVEL: "INFO"
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agentic-crm-secrets
+  labels:
+    app: agentic-crm
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "CHANGE_ME_IN_PRODUCTION"
+  SECRET_KEY: "CHANGE_ME_IN_PRODUCTION"
+  SMTP_USER: ""
+  SMTP_PASS: ""
+  APOLLO_API_KEY: ""
+  TWILIO_ACCOUNT_SID: ""
+  TWILIO_AUTH_TOKEN: ""

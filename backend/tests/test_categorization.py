@@ -2,12 +2,13 @@
 Tests for AI Product Categorization Service
 """
 import pytest
+
 from app.services.categorization_service import (
-    CategorizationService,
-    CategorizationResult,
+    CHEMICAL_KEYWORDS,
     MACHINERY_KEYWORDS,
     TEXTILE_KEYWORDS,
-    CHEMICAL_KEYWORDS,
+    CategorizationResult,
+    CategorizationService,
 )
 
 

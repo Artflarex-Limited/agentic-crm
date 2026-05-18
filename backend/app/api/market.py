@@ -5,7 +5,6 @@ Real-time pricing trends, demand forecasting, competitor monitoring, anomaly ale
 import logging
 import uuid
 from datetime import datetime, timedelta
-from typing import Annotated
 
 from fastapi import APIRouter, Query
 

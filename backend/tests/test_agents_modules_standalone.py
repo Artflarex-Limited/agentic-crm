@@ -2,7 +2,6 @@
 Standalone tests for agent modules - minimal conftest replacement.
 These tests mock the prisma module at import time to avoid the generation check.
 """
-import json
 import sys
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -14,7 +13,18 @@ sys.modules['app.prisma'].prisma = MagicMock()
 
 
 class MockPrisma:
+    """Minimal mock of prisma client - auto-creates nested models on access."""
     is_connected = True
+
+    def __getattr__(self, name):
+        # Auto-create nested mock models (e.g., .sequenceenrollment, .lead)
+        nested = MagicMock()
+        setattr(self, name, nested)
+        return nested
+
+    def __getitem__(self, name):
+        # Support bracket access for dict-like models (if needed)
+        return self.__getattr__(name)
 
 
 @pytest.fixture
@@ -794,7 +804,7 @@ class TestProcurementAgent:
         mock_prisma.procurementrequest.find_many = AsyncMock(return_value=[mock_req])
         mock_prisma.auditlog.create = AsyncMock()
 
-        with patch("app.services.procurement_service.get_procurement_service") as mock_ps, \
+        with patch("app.services.procurement_service.get_procurement_service") as _, \
              patch("app.services.supplier_matching_service.get_supplier_matching_service") as mock_ms:
 
             mock_ms.return_value.get_top_suppliers_for_rfq = AsyncMock(return_value=[])
@@ -897,7 +907,7 @@ class TestAgentContext:
         assert ctx_dict["role"] == AgentRole.RESEARCH.value
 
     def test_agent_context_context_manager(self):
-        from app.agents.context import AgentContext, get_current_run_id, get_current_correlation_id
+        from app.agents.context import AgentContext, get_current_run_id
         from app.models.models import AgentRole
 
         initial_run = get_current_run_id()

@@ -53,7 +53,6 @@ class AgenticCRM:
         **kwargs: Any,
     ) -> httpx.Response:
         retries = retries if retries is not None else self.config.max_retries
-        url = f"{self.base_url}{path}"
 
         for attempt in range(retries):
             try:
@@ -82,7 +81,7 @@ class AgenticCRM:
                         request=response.request,
                         response=response,
                     )
-            except (httpx.ConnectError, httpx.TimeoutException) as e:
+            except (httpx.ConnectError, httpx.TimeoutException):
                 if attempt < retries - 1:
                     continue
                 raise

@@ -2,7 +2,6 @@
 Dashboard API routes
 """
 from datetime import datetime, timedelta
-from typing import Optional
 
 from fastapi import APIRouter, Query
 
@@ -164,13 +163,12 @@ async def get_market_intelligence(
     source_effectiveness = []
     for source, data in source_results.items():
         count = data["count"]
-        avg_score = data["total_score"] / count if count > 0 else 0
 
         # Count converted leads (qualified through won stages)
         source_leads = [
-            l for l in all_leads
-            if (l.source.value if hasattr(l.source, 'value') else str(l.source)) == source
-            and (l.stage.value if hasattr(l.stage, 'value') else str(l.stage)) in ["qualified", "proposal", "negotiation", "won"]
+            lead for lead in all_leads
+            if (lead.source.value if hasattr(lead.source, 'value') else str(lead.source)) == source
+            and (lead.stage.value if hasattr(lead.stage, 'value') else str(lead.stage)) in ["qualified", "proposal", "negotiation", "won"]
         ]
         converted = len(source_leads)
         source_conversion = (converted / count * 100) if count > 0 else 0.0

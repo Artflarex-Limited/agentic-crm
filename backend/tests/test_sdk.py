@@ -1,11 +1,9 @@
 """
 Tests for Agentic CRM Python SDK.
 """
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import httpx
+from unittest.mock import MagicMock, patch
 
-from agentic_crm_sdk import AgenticCRM, SDKConfig
+from agentic_crm_sdk import SDKConfig
 from agentic_crm_sdk.client import AgenticCRM
 
 
@@ -130,7 +128,7 @@ class TestLeadsClient:
         mock_httpx_client.return_value = mock_client_instance
 
         client = AgenticCRM()
-        result = client.leads.create({"name": "New Lead", "email": "test@example.com"})
+        client.leads.create({"name": "New Lead", "email": "test@example.com"})
 
         mock_client_instance.request.assert_called_once()
 

@@ -1,28 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: celery-worker
   labels:
     app: agentic-crm
-    component: frontend
+    component: celery-worker
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: agentic-crm
-      component: frontend
+      component: celery-worker
   template:
     metadata:
       labels:
         app: agentic-crm
-        component: frontend
+        component: celery-worker
     spec:
       containers:
-        - name: frontend
-          image: agentic-crm-frontend:latest
-          ports:
-            - containerPort: 3000
-              name: http
+        - name: celery-worker
+          image: agentic-crm-backend:latest
+          command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
           envFrom:
             - configMapRef:
                 name: agentic-crm-config
@@ -33,21 +31,12 @@ spec:
               cpu: 250m
               memory: 256M
             limits:
-              cpu: 1000m
+              cpu: 2000m
               memory: 1G
           livenessProbe:
-            httpGet:
-              path: /
-              port: 3000
+            exec:
+              command: ["celery", "-A", "app.celery_app", "inspect", "ping"]
             initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 10
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
             failureThreshold: 3

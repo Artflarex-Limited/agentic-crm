@@ -3,7 +3,7 @@ Activities API routes
 """
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from app.prisma import prisma
 from app.schemas.schemas import ActivityCreate, ActivityResponse

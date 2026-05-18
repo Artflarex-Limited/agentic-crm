@@ -2,6 +2,7 @@
 Leads API routes
 """
 import json
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from app.core.config import get_settings
@@ -43,11 +44,12 @@ async def get_lead(lead_id: int, request: Request):
 @router.post("/", response_model=LeadResponse, status_code=201)
 @limiter.limit(settings.rate_limit_default)
 async def create_lead(data: LeadCreate, request: Request):
-    data_dict = data.model_dump()
-    # Convert list fields to JSON strings for SQLite storage
+    data_dict = data.model_dump(by_alias=True)
+    data_dict["contactId"] = data_dict.pop("contact_id")
+    if "assigned_agent_id" in data_dict:
+        data_dict["assignedAgentId"] = data_dict.pop("assigned_agent_id")
     _convert_lists_to_json(data_dict, ["tags"])
     lead = await prisma.lead.create(data=data_dict)
-    # Re-fetch with contact relation
     lead = await prisma.lead.find_unique(
         where={"id": lead.id},
         include={"contact": True},
@@ -62,7 +64,24 @@ async def update_lead(lead_id: int, data: LeadUpdate, request: Request):
     if not existing:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    update_data = data.model_dump(exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True, by_alias=True)
+    rename_fields = {
+        "contact_id": "contactId",
+        "assigned_agent_id": "assignedAgentId",
+        "snooze_until": "snoozeUntil",
+        "last_contacted_at": "lastContactedAt",
+        "utm_source": "utmSource",
+        "utm_medium": "utmMedium",
+        "utm_campaign": "utmCampaign",
+        "utm_term": "utmTerm",
+        "utm_content": "utmContent",
+        "hubspot_contact_id": "hubspotContactId",
+        "ga_client_id": "gaClientId",
+    }
+    for old_key, new_key in rename_fields.items():
+        if old_key in update_data:
+            update_data[new_key] = update_data.pop(old_key)
+
     if "tags" in update_data:
         _convert_lists_to_json(update_data, ["tags"])
 
@@ -115,17 +134,56 @@ async def enrich_lead(lead_id: int, request: Request, background_tasks: Backgrou
 
 
 def _prisma_to_dict(obj) -> dict:
-    """Convert Prisma model to dict, parsing JSON string fields."""
+    """Convert Prisma model to dict, parsing JSON string fields and converting camelCase to snake_case recursively."""
     d = {}
+    json_fields = ("tags", "extra_data")
     for key, value in obj.model_dump().items():
-        if key in ("tags", "extra_data") and isinstance(value, str):
+        snake_key = _camel_to_snake(key)
+        if key in json_fields and isinstance(value, str):
             try:
-                d[key] = json.loads(value) if value else []
+                parsed = json.loads(value) if value else None
+                if key == "extra_data":
+                    d[snake_key] = parsed if parsed is not None else {}
+                else:
+                    d[snake_key] = parsed if parsed is not None else []
             except (json.JSONDecodeError, TypeError):
-                d[key] = value if value else []
+                if key == "extra_data":
+                    d[snake_key] = {}
+                else:
+                    d[snake_key] = value
+        elif key in json_fields and value is None:
+            d[snake_key] = {} if key == "extra_data" else []
+        elif isinstance(value, dict):
+            d[snake_key] = _convert_dict_keys(value)
+        elif hasattr(value, 'model_dump'):
+            d[snake_key] = _prisma_to_dict(value)
         else:
-            d[key] = value
+            d[snake_key] = value
     return d
+
+
+def _convert_dict_keys(d: dict) -> dict:
+    """Convert all keys in a dict from camelCase to snake_case recursively."""
+    result = {}
+    for key, value in d.items():
+        snake_key = _camel_to_snake(key)
+        if isinstance(value, dict):
+            result[snake_key] = _convert_dict_keys(value)
+        elif isinstance(value, list):
+            result[snake_key] = [
+                _convert_dict_keys(item) if isinstance(item, dict) else item
+                for item in value
+            ]
+        else:
+            result[snake_key] = value
+    return result
+
+
+def _camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case."""
+    import re
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
 def _convert_lists_to_json(data: dict, fields: list):

@@ -3,7 +3,7 @@ Pydantic schemas for request/response validation
 """
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.enums import ActivityType, AgentRole, AgentStatus, DealStage, LeadSource, LeadStage
 
@@ -23,13 +23,12 @@ class CompanyResponse(CompanyCreate):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Contact ──────────────────────────────────────────────────────────────────
 class ContactCreate(BaseModel):
-    company_id: int | None = None
+    company_id: int | None = Field(default=None, validation_alias="companyId")
     first_name: str | None = None
     last_name: str | None = None
     email: str | None = None
@@ -38,25 +37,29 @@ class ContactCreate(BaseModel):
     linkedin_url: str | None = None
     extra_data: dict = {}
 
+    model_config = ConfigDict(populate_by_name=True)
+
 
 class ContactResponse(ContactCreate):
     id: int
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Lead ────────────────────────────────────────────────────────────────────
 class LeadCreate(BaseModel):
-    contact_id: int
+    contact_id: int = Field(validation_alias="contactId")
     source: LeadSource = LeadSource.OTHER
     stage: LeadStage = LeadStage.NEW
     score: int = 0
     tags: list = []
     notes: str | None = None
     assigned_agent_id: int | None = None
+
+    class Config:
+        populate_by_name = True
 
 
 class LeadUpdate(BaseModel):
@@ -89,13 +92,12 @@ class LeadResponse(LeadCreate):
     updated_at: datetime
     contact: ContactResponse | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Deal ────────────────────────────────────────────────────────────────────
 class DealCreate(BaseModel):
-    contact_id: int
+    contact_id: int = Field(validation_alias="contactId")
     company_id: int | None = None
     name: str
     value: float = 0.0
@@ -117,8 +119,7 @@ class DealResponse(DealCreate):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Agent ────────────────────────────────────────────────────────────────────

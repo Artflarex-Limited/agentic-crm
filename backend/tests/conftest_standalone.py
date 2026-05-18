@@ -5,8 +5,6 @@ This conftest patches the prisma module system-wide BEFORE any application impor
 import sys
 from unittest.mock import MagicMock
 
-import pytest
-
 mock_prisma_module = MagicMock()
 mock_prisma_module.prisma = MagicMock()
 mock_prisma_module.prisma.is_connected = True

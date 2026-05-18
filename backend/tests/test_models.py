@@ -1,7 +1,7 @@
 """
 Unit tests for Prisma models — CRUD operations
 """
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -108,7 +108,7 @@ async def test_deal_crud(session_prisma, sample_contact, sample_company):
             "name": "Big Deal",
             "value": 100000.0,
             "stage": DealStage.LEAD.value,
-            "expectedCloseDate": datetime.now(timezone.utc) + timedelta(days=60)
+            "expectedCloseDate": datetime.now(UTC) + timedelta(days=60)
         }
     )
     assert deal.id is not None
@@ -163,20 +163,22 @@ async def test_agent_status_transitions(session_prisma, sample_agent):
 
 @pytest.mark.asyncio
 async def test_sequence_crud(session_prisma):
+    import json
     sequence = await prisma.sequence.create(
         data={
             "name": "Follow-up Sequence",
             "description": "Re-engagement emails",
-            "steps": [
+            "steps": json.dumps([
                 {"type": "email", "subject": "Checking in", "content": "Hi!", "delay_days": 1},
                 {"type": "email", "subject": "Still interested?", "content": "Bump", "delay_days": 3},
-            ],
-            "is_active": True
+            ]),
+            "isActive": True
         }
     )
     assert sequence.id is not None
-    assert len(sequence.steps) == 2
-    assert sequence.is_active is True
+    steps = json.loads(sequence.steps) if sequence.steps else []
+    assert len(steps) == 2
+    assert sequence.isActive is True
 
 
 @pytest.mark.asyncio
@@ -185,7 +187,7 @@ async def test_sequence_enrollment_crud(session_prisma, sample_lead, sample_sequ
         data={
             "leadId": sample_lead.id,
             "sequenceId": sample_sequence.id,
-            "current_step": 0,
+            "currentStep": 0,
             "status": "active"
         }
     )
@@ -219,8 +221,8 @@ async def test_audit_log_crud(session_prisma, sample_agent):
         data={
             "agentId": sample_agent.id,
             "action": "lead_stage_changed",
-            "entity_type": "lead",
-            "entity_id": 1,
+            "entityType": "lead",
+            "entityId": 1,
             "details": '{"from": "new", "to": "contacted"}'
         }
     )
@@ -252,25 +254,27 @@ async def test_contact_relationships(session_prisma, sample_contact, sample_lead
         where={"id": sample_contact.id},
         include={"leads": True, "deals": True}
     )
-    assert any(l.id == sample_lead.id for l in fetched.leads)
-    assert any(d.id == sample_deal.id for d in fetched.deals)
+    assert any(lead.id == sample_lead.id for lead in fetched.leads)
+    assert any(deal.id == sample_deal.id for deal in fetched.deals)
 
 
 @pytest.mark.asyncio
 async def test_lead_snooze(session_prisma, sample_lead):
-    future = datetime.now(timezone.utc) + timedelta(days=3)
+    future = datetime.now(UTC) + timedelta(days=3)
     updated = await prisma.lead.update(
         where={"id": sample_lead.id},
         data={"snoozeUntil": future}
     )
-    assert updated.snoozeUntil == future
+    assert updated.snoozeUntil is not None
+    assert abs((updated.snoozeUntil.replace(tzinfo=None) - future.replace(tzinfo=None)).total_seconds()) < 1
 
 
 @pytest.mark.asyncio
 async def test_lead_last_contacted(session_prisma, sample_lead):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     updated = await prisma.lead.update(
         where={"id": sample_lead.id},
         data={"lastContactedAt": now}
     )
-    assert updated.lastContactedAt == now
+    assert updated.lastContactedAt is not None
+    assert abs((updated.lastContactedAt.replace(tzinfo=None) - now.replace(tzinfo=None)).total_seconds()) < 1

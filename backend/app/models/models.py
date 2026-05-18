@@ -1,4 +1,18 @@
 # Re-export Prisma-generated ORM models so existing import paths keep working
+# Re-export shared enums so existing import paths keep working
+from app.enums import (
+    ActivityType,
+    AgentRole,
+    AgentStatus,
+    DealStage,
+    InvoiceStatus,
+    LeadSource,
+    LeadStage,
+    ProcurementStatus,
+    QuoteStatus,
+    ShipmentStatus,
+    SupplierStatus,
+)
 from app.generated.models import (
     Activity,
     Agent,
@@ -16,21 +30,6 @@ from app.generated.models import (
     Shipment,
     Supplier,
     User,
-)
-
-# Re-export shared enums so existing import paths keep working
-from app.enums import (
-    ActivityType,
-    AgentRole,
-    AgentStatus,
-    DealStage,
-    InvoiceStatus,
-    LeadSource,
-    LeadStage,
-    ProcurementStatus,
-    QuoteStatus,
-    ShipmentStatus,
-    SupplierStatus,
 )
 
 __all__ = [
