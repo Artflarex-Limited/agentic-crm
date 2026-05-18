@@ -1,15 +1,10 @@
 # syntax=docker/dockerfile:1
-# Multi-stage build for FastAPI backend
+# Multi-stage build for FastAPI backend — SQLite only, single process
 
 # ── Stage 1: Builder ───────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM python:3.12-slim AS builder
-
-ARG TARGETPLATFORM
-ARG BUILDPLATFORM
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
-
-RUN echo "Building for $TARGETPLATFORM"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc libpq-dev \
@@ -23,11 +18,11 @@ FROM python:3.12-slim AS runner
 
 WORKDIR /app
 
+# Create non-root user for security
 RUN groupadd --gid 1000 appgroup && \
     useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
 
-RUN mkdir -p /app/data /app/.prisma/binaries && \
-    chown -R appuser:appgroup /app
+RUN mkdir -p /app/data && chown -R appuser:appgroup /app
 
 COPY --from=builder /install /usr/local
 

@@ -7,11 +7,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Database - REQUIRED, no default
-    database_url: str = ""
-
-    # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    # Database
+    database_url: str = "file:///app/data/agentic_crm.db"
 
     # Security - REQUIRED, no default
     secret_key: str = ""
@@ -53,27 +50,12 @@ class Settings(BaseSettings):
     google_ads_conversion_id: str = ""
     google_ads_conversion_label_rfq: str = ""
 
-    # Agent settings
-    outreach_requires_approval: bool = True
-
     # CORS
     allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
-
-    # Elasticsearch
-    elasticsearch_hosts: list[str] | None = None
-
-    # OpenTelemetry Tracing
-    otel_exporter_endpoint: str = ""
 
     # ML Model Service
     ml_model_service_url: str = "http://localhost:8001"
     ml_inference_timeout: int = 30
-
-    # Celery (DEPRECATED — agents use FastAPI BackgroundTasks)
-    # celery_broker_url: str = "redis://localhost:6379/0"
-    # celery_result_backend: str = "redis://localhost:6379/0"
-    celery_task_time_limit: int = 300
-    celery_worker_concurrency: int = 4
 
     class Config:
         env_file = ".env"
